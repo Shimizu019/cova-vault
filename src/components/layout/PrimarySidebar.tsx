@@ -20,22 +20,22 @@ interface NavLinkSpec {
 const moduleItems: NavLinkSpec[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
   { id: 'credentials', label: 'Credentials', icon: Key, href: '/credentials' },
-  { id: 'wallet', label: 'My Wallet', icon: Wallet, href: '/dashboard#wallet', comingSoon: true },
-  { id: 'savings', label: 'Savings', icon: PiggyBank, href: '/dashboard#savings', comingSoon: true },
+  { id: 'wallet', label: 'My Wallet', icon: Wallet, href: '/wallet' },
+  { id: 'savings', label: 'Savings', icon: PiggyBank, href: '/savings' },
 ];
 
 const sampleItems: NavLinkSpec[] = [
-  { id: 'notes', label: 'Notes', icon: FileText, href: '/dashboard#notes', comingSoon: true },
-  { id: 'tasks', label: 'Tasks', icon: CheckSquare, href: '/dashboard#tasks', comingSoon: true },
-  { id: 'folder', label: 'Folder', icon: Folder, href: '/dashboard#folder', comingSoon: true },
-  { id: 'favorites', label: 'Favorites', icon: Star, href: '/dashboard#favorites', comingSoon: true },
-  { id: 'calendar', label: 'Calendar', icon: Calendar, href: '/dashboard#calendar', comingSoon: true },
-  { id: 'schedule', label: 'Schedule', icon: Clock, href: '/dashboard#schedule', comingSoon: true },
+  { id: 'notes', label: 'Notes', icon: FileText, href: '/notes' },
+  { id: 'tasks', label: 'Tasks', icon: CheckSquare, href: '/tasks' },
+  { id: 'folder', label: 'Folder', icon: Folder, href: '/folders' },
+  { id: 'favorites', label: 'Favorites', icon: Star, href: '/favorites' },
+  { id: 'calendar', label: 'Calendar', icon: Calendar, href: '/calendar' },
+  { id: 'schedule', label: 'Schedule', icon: Clock, href: '/schedule' },
   { id: 'generator', label: 'Password Generator', icon: KeyRound, href: '/generator' },
 ];
 
 const securityItems: NavLinkSpec[] = [
-  { id: 'activity', label: 'Activity Log', icon: Activity, href: '/dashboard#activity', comingSoon: true },
+  { id: 'activity', label: 'Activity Log', icon: Activity, href: '/activity' },
   { id: 'settings', label: 'Settings', icon: Settings, href: '/settings' },
   { id: 'lock', label: 'Lock', icon: Lock, href: '/lock' },
 ];
