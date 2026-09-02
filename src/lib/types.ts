@@ -14,6 +14,21 @@ export type FontSize = 'small' | 'medium' | 'large';
 /** Layout density */
 export type LayoutDensity = 'compact' | 'comfortable' | 'spacious';
 
+/** Supported UI languages */
+export type Language =
+  | 'en'    // English
+  | 'fil'   // Filipino / Tagalog
+  | 'ko'    // Korean
+  | 'zh'    // Chinese (Simplified)
+  | 'ja'    // Japanese
+  | 'es'    // Spanish
+  | 'fr'    // French
+  | 'de'    // German
+  | 'vi'    // Vietnamese
+  | 'id'    // Bahasa Indonesia
+  | 'pt'    // Portuguese
+  | 'ar';   // Arabic
+
 /** Status type for activities and items */
 export type ItemStatus = 'credentials' | 'notes' | 'tasks' | 'wallet';
 
@@ -106,7 +121,7 @@ export interface AppSettings {
   accentColor: AccentColor;
   fontSize: FontSize;
   layoutDensity: LayoutDensity;
-  language: string;
+  language: Language;
   notifications: boolean;
   twoFactorEnabled: boolean;
   backupEnabled: boolean;

@@ -11,7 +11,7 @@ interface UIState {
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setSearchQuery: (query: string) => void;
-  addToast: (message: string, type?: ToastMessage['type']) => void;
+  addToast: (message: string, type?: ToastMessage['type'], duration?: number) => void;
   removeToast: (id: string) => void;
   togglePasswordVisibility: (id: string) => void;
 }
@@ -28,13 +28,14 @@ export const useUIStore = create<UIState>()(
       setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
       setSearchQuery: (query) => set({ searchQuery: query }),
 
-      addToast: (message, type = 'info') => {
+      addToast: (message, type = 'info', duration) => {
         const id = generateId();
-        const toast: ToastMessage = { id, message, type, duration: 3500 };
+        const toastDuration = duration ?? 3500;
+        const toast: ToastMessage = { id, message, type, duration: toastDuration };
         set((s) => ({ toasts: [...s.toasts, toast] }));
         setTimeout(() => {
           set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
-        }, toast.duration ?? 3500);
+        }, toastDuration);
       },
 
       removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),

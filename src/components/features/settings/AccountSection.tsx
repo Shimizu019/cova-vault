@@ -1,26 +1,33 @@
+﻿import { useEffect, useRef } from 'react';
 import { User, Camera } from 'lucide-react';
-import { Button } from '@components/ui/Button';
 import { Input, Label } from '@components/ui/Input';
 import { useSettingsStore, useUIStore } from '@store';
 import { getInitials } from '@lib/utils';
 
-interface Props {
-  profileName: string;
-  profileEmail: string;
-  profileDisplayName: string;
-  onNameChange: (v: string) => void;
-  onEmailChange: (v: string) => void;
-  onDisplayNameChange: (v: string) => void;
-}
-
-export function AccountSection({ profileName, profileEmail, profileDisplayName, onNameChange, onEmailChange, onDisplayNameChange }: Props) {
+export function AccountSection() {
   const { user, updateUser } = useSettingsStore();
   const { addToast } = useUIStore();
 
-  const handleSave = () => {
-    updateUser({ name: profileName, email: profileEmail, displayName: profileDisplayName });
-    addToast('Profile updated successfully', 'success');
+  // Local state for the inputs — auto-save to the store on every keystroke
+  const nameRef = useRef(user.name);
+  const displayNameRef = useRef(user.displayName);
+  const emailRef = useRef(user.email);
+
+  // Sync to store on input change (with a short debounce)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queueSave = (patch: Partial<typeof user>) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      updateUser(patch);
+      addToast('Profile updated', 'success', 1500);
+    }, 600);
   };
+
+  useEffect(() => {
+    nameRef.current = user.name;
+    displayNameRef.current = user.displayName;
+    emailRef.current = user.email;
+  }, [user.name, user.displayName, user.email]);
 
   return (
     <div id="account" className="card mb-4 overflow-hidden">
@@ -72,22 +79,22 @@ export function AccountSection({ profileName, profileEmail, profileDisplayName, 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <Label htmlFor="profile-name">Name</Label>
-            <Input id="profile-name" value={profileName} onChange={(e) => onNameChange(e.target.value)} placeholder="Your name" />
+            <Input id="profile-name" defaultValue={user.name} onChange={(e) => { nameRef.current = e.target.value; queueSave({ name: e.target.value }); }} placeholder="Your name" />
           </div>
           <div>
             <Label htmlFor="profile-display">Display Name</Label>
-            <Input id="profile-display" value={profileDisplayName} onChange={(e) => onDisplayNameChange(e.target.value)} placeholder="Display name" />
+            <Input id="profile-display" defaultValue={user.displayName} onChange={(e) => { displayNameRef.current = e.target.value; queueSave({ displayName: e.target.value }); }} placeholder="Display name" />
           </div>
           <div>
             <Label htmlFor="profile-email">Email</Label>
-            <Input id="profile-email" type="email" value={profileEmail} onChange={(e) => onEmailChange(e.target.value)} placeholder="email@example.com" />
+            <Input id="profile-email" type="email" defaultValue={user.email} onChange={(e) => { emailRef.current = e.target.value; queueSave({ email: e.target.value }); }} placeholder="email@example.com" />
           </div>
         </div>
         <div>
           <Label htmlFor="profile-password">New Password</Label>
-          <Input id="profile-password" type="password" value="" placeholder="Leave blank to keep current" />
+          <Input id="profile-password" type="password" placeholder="Leave blank to keep current" />
         </div>
-        <Button variant="primary" onClick={handleSave}>Save Changes</Button>
+        <p className="text-xs text-cova-textMuted italic">Changes are saved automatically.</p>
       </div>
     </div>
   );
