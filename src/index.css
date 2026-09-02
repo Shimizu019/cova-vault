@@ -2,6 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Map Tailwind cova-* color utilities to CSS variables so they
+   automatically switch between dark and light themes. */
+@layer utilities {
+  .bg-cova-bg { background-color: var(--cova-bg); }
+  .bg-cova-surface { background-color: var(--cova-surface); }
+  .bg-cova-surfaceHover { background-color: var(--cova-surface-hover); }
+  .bg-cova-primary { background-color: var(--cova-primary); }
+  .bg-cova-primaryHover { background-color: var(--cova-primary-hover); }
+  .bg-cova-primaryLight { background-color: var(--cova-primary-light); }
+  .bg-cova-danger { background-color: var(--cova-danger); }
+  .bg-cova-dangerLight { background-color: var(--cova-danger-light); }
+  .bg-cova-success { background-color: var(--cova-success); }
+  .bg-cova-successLight { background-color: var(--cova-success-light); }
+  .bg-cova-warning { background-color: var(--cova-warning); }
+  .bg-cova-warningLight { background-color: var(--cova-warning-light); }
+  .bg-cova-sidebar { background-color: var(--cova-sidebar); }
+  .bg-cova-input { background-color: var(--cova-input); }
+  .bg-cova-modal { background-color: var(--cova-modal); }
+
+  .text-cova-text { color: var(--cova-text); }
+  .text-cova-textSecondary { color: var(--cova-text-secondary); }
+  .text-cova-textMuted { color: var(--cova-text-muted); }
+  .text-cova-primary { color: var(--cova-primary); }
+  .text-cova-danger { color: var(--cova-danger); }
+  .text-cova-success { color: var(--cova-success); }
+  .text-cova-warning { color: var(--cova-warning); }
+  .text-cova-tasks { color: var(--cova-warning); }
+  .text-cova-credentials { color: var(--cova-danger); }
+  .text-cova-notes { color: var(--cova-success); }
+  .text-cova-wallet { color: var(--cova-success); }
+
+  .border-cova-border { border-color: var(--cova-border); }
+  .border-cova-borderStrong { border-color: var(--cova-border-strong); }
+  .border-cova-sidebarBorder { border-color: var(--cova-sidebar-border); }
+  .border-cova-inputBorder { border-color: var(--cova-input-border); }
+  .border-cova-primary { border-color: var(--cova-primary); }
+  .border-cova-danger { border-color: var(--cova-danger); }
+  .border-cova-success { border-color: var(--cova-success); }
+  .border-cova-warning { border-color: var(--cova-warning); }
+
+  .ring-cova-primary { --tw-ring-color: var(--cova-primary); }
+  .ring-offset-cova-bg { --tw-ring-offset-color: var(--cova-bg); }
+
+  .placeholder-cova-textMuted::placeholder { color: var(--cova-text-muted); }
+
+  .divide-cova-border > :not([hidden]) ~ :not([hidden]) { border-color: var(--cova-border); }
+
+  /* Scrollbar */
+  .scrollbar-thin { scrollbar-color: var(--cova-scrollbar) transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--cova-scrollbar); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--cova-scrollbar-hover); }
+
+  /* Accent color hex background (used by appearance picker) */
+  .bg-cova-accent-current { background-color: var(--cova-accent, var(--cova-primary)); }
+}
+
 @layer base {
   :root {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -9,10 +65,77 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+
+    /* Dark theme (default) — Cova brand colors */
+    --cova-bg: #0B0C10;
+    --cova-surface: #12141D;
+    --cova-surface-hover: #181B27;
+    --cova-border: #1F2232;
+    --cova-border-strong: #2A2E40;
+    --cova-text: #FFFFFF;
+    --cova-text-secondary: #9CA3AF;
+    --cova-text-muted: #6B7280;
+    --cova-primary: #7C3AED;
+    --cova-primary-hover: #8B5CF6;
+    --cova-primary-light: #2A1B5C;
+    --cova-danger: #EF4444;
+    --cova-danger-hover: #DC2626;
+    --cova-danger-light: #3F1212;
+    --cova-success: #22C55E;
+    --cova-success-light: #0E2A18;
+    --cova-warning: #F59E0B;
+    --cova-warning-light: #3A2510;
+    --cova-sidebar: #0E1018;
+    --cova-sidebar-border: #1F2232;
+    --cova-input: #12141D;
+    --cova-input-border: #2A2E40;
+    --cova-modal: #12141D;
+    --cova-scrollbar: #1F2232;
+    --cova-scrollbar-hover: #2A2E40;
+    --cova-overlay: rgba(0, 0, 0, 0.75);
+    color-scheme: dark;
+  }
+
+  /* Light theme overrides */
+  [data-theme='light'] {
+    --cova-bg: #F7F8FA;
+    --cova-surface: #FFFFFF;
+    --cova-surface-hover: #F1F2F6;
+    --cova-border: #E5E7EB;
+    --cova-border-strong: #D1D5DB;
+    --cova-text: #0B0C10;
+    --cova-text-secondary: #4B5563;
+    --cova-text-muted: #6B7280;
+    --cova-primary: #7C3AED;
+    --cova-primary-hover: #6D28D9;
+    --cova-primary-light: #EDE9FE;
+    --cova-danger: #DC2626;
+    --cova-danger-hover: #B91C1C;
+    --cova-danger-light: #FEE2E2;
+    --cova-success: #16A34A;
+    --cova-success-light: #DCFCE7;
+    --cova-warning: #D97706;
+    --cova-warning-light: #FEF3C7;
+    --cova-sidebar: #FFFFFF;
+    --cova-sidebar-border: #E5E7EB;
+    --cova-input: #FFFFFF;
+    --cova-input-border: #D1D5DB;
+    --cova-modal: #FFFFFF;
+    --cova-scrollbar: #D1D5DB;
+    --cova-scrollbar-hover: #9CA3AF;
+    --cova-overlay: rgba(0, 0, 0, 0.45);
+    color-scheme: light;
   }
 
   html {
-    @apply bg-cova-bg text-cova-text;
+    background-color: var(--cova-bg);
+    color: var(--cova-text);
+  }
+
+  body {
+    background-color: var(--cova-bg);
+    color: var(--cova-text);
+    transition: background-color 200ms ease, color 200ms ease;
   }
 
 @layer components {
