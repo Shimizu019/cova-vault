@@ -1,4 +1,4 @@
-import { forwardRef, InputHTMLAttributes, TextareaHTMLAttributes, SelectHTMLAttributes } from 'react';
+import { forwardRef, InputHTMLAttributes } from 'react';
 import { cn } from '@lib/utils';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -6,52 +6,23 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type = 'text', error, ...props }, ref) => {
-    return (
-      <input
-        ref={ref}
-        type={type}
-        className={cn('input', error && 'input-error', className)}
-        {...props}
-      />
-    );
-  }
+  ({ className, error, ...props }, ref) => (
+    <input
+      ref={ref}
+      className={cn('input', error && 'input-error', className)}
+      {...props}
+    />
+  )
 );
-
 Input.displayName = 'Input';
 
-export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(
-  ({ className, ...props }, ref) => {
-    return (
-      <textarea
-        ref={ref}
-        className={cn('input min-h-[80px] resize-y', className)}
-        {...props}
-      />
-    );
-  }
+interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
+  required?: boolean;
+}
+
+export const Label = ({ className, children, required, ...props }: LabelProps) => (
+  <label className={cn('label', className)} {...props}>
+    {children}
+    {required && <span className="text-cova-danger ml-0.5">*</span>}
+  </label>
 );
-
-Textarea.displayName = 'Textarea';
-
-export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
-  ({ className, ...props }, ref) => {
-    return (
-      <select
-        ref={ref}
-        className={cn('input appearance-none bg-light-input dark:bg-dark-input', className)}
-        {...props}
-      />
-    );
-  }
-);
-
-Select.displayName = 'Select';
-
-export const Label = ({ className, children, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) => {
-  return (
-    <label className={cn('label', className)} {...props}>
-      {children}
-    </label>
-  );
-};

@@ -1,10 +1,12 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+/** Combine class names safely with Tailwind-aware merging */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Format a date as "Jan 15, 2024" */
 export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions): string {
   const d = new Date(date);
   return d.toLocaleDateString('en-US', {
@@ -15,6 +17,7 @@ export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOpt
   });
 }
 
+/** Format a date and time */
 export function formatDateTime(date: string | Date): string {
   const d = new Date(date);
   return d.toLocaleDateString('en-US', {
@@ -26,29 +29,33 @@ export function formatDateTime(date: string | Date): string {
   });
 }
 
+/** Format a timestamp as "2 hours ago", "Yesterday", etc. */
 export function formatRelativeTime(date: string | Date): string {
   const d = new Date(date);
   const now = new Date();
-  const diffMs = d.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const diffMs = now.getTime() - d.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
 
-  if (diffDays < 0) {
-    const pastDays = Math.ceil(-diffMs / (1000 * 60 * 60 * 24));
-    if (pastDays === 1) return 'Yesterday';
-    if (pastDays < 7) return `${pastDays} days ago`;
-    return formatDate(d);
-  }
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Tomorrow';
-  if (diffDays < 7) return `In ${diffDays} days`;
+  if (diffSec < 60) return 'Just now';
+  if (diffMin < 60) return `${diffMin} min ago`;
+  if (diffHr < 24) return `${diffHr} hour${diffHr > 1 ? 's' : ''} ago`;
+  if (diffDay === 1) return 'Yesterday';
+  if (diffDay < 7) return `${diffDay} days ago`;
+  if (diffDay < 30) return `${Math.floor(diffDay / 7)} week${diffDay >= 14 ? 's' : ''} ago`;
   return formatDate(d);
 }
 
+/** Generate a unique ID */
 export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/** Get initials from a name */
 export function getInitials(name: string): string {
+  if (!name) return '?';
   return name
     .split(' ')
     .map((part) => part[0])
@@ -57,20 +64,25 @@ export function getInitials(name: string): string {
     .slice(0, 2);
 }
 
+/** Truncate a string */
 export function truncate(str: string, length: number): string {
+  if (!str) return '';
   if (str.length <= length) return str;
   return `${str.slice(0, length)}...`;
 }
 
+/** Get domain from a URL */
 export function getDomainFromUrl(url: string): string {
+  if (!url) return '';
   try {
-    const hostname = new URL(url).hostname;
-    return hostname.replace('www.', '');
+    const hostname = new URL(url.startsWith('http') ? url : `https://${url}`).hostname;
+    return hostname.replace(/^www\./, '');
   } catch {
     return url;
   }
 }
 
+/** Get service name from a URL */
 export function getServiceNameFromUrl(url: string): string {
   const domain = getDomainFromUrl(url);
   const knownServices: Record<string, string> = {
@@ -86,43 +98,60 @@ export function getServiceNameFromUrl(url: string): string {
     'linear.app': 'Linear',
     'vercel.com': 'Vercel',
     'netlify.com': 'Netlify',
-    'heroku.com': 'Heroku',
-    'digitalocean.com': 'DigitalOcean',
     'cloudflare.com': 'Cloudflare',
     'atlassian.com': 'Atlassian',
-    'jira.com': 'Jira',
-    'confluence.com': 'Confluence',
     'zoom.us': 'Zoom',
-    'teams.microsoft.com': 'Teams',
-    'meet.google.com': 'Google Meet',
   };
   return knownServices[domain] || domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1);
 }
 
-export function getServiceColor(name: string): string {
-  const colors: Record<string, string> = {
-    'Google': '#4285F4',
-    'Microsoft': '#0078D4',
-    'GitHub': '#181717',
-    'AWS': '#FF9900',
-    'Discord': '#5865F2',
-    'Facebook': '#1877F2',
-    'Slack': '#4A154B',
-    'Figma': '#F24E1E',
-    'Notion': '#000000',
-    'Linear': '#5E6AD2',
-    'Vercel': '#000000',
-    'Netlify': '#00C7B7',
-    'Heroku': '#430098',
-    'DigitalOcean': '#0080FF',
-    'Cloudflare': '#F38020',
-    'Atlassian': '#0052CC',
-    'Zoom': '#2D8CFF',
-    'Teams': '#6264A7',
-  };
-  return colors[name] || '#6B7280';
+/** Format a number as Philippine Peso (₱) */
+export function formatPHP(amount: number): string {
+  return `₱${new Intl.NumberFormat('en-PH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)}`;
 }
 
+/** Format generic currency */
+export function formatCurrency(amount: number, currency = 'PHP'): string {
+  return new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+/** Compute password strength score (0..5) and label */
+export function calculatePasswordStrength(password: string): { score: number; label: string; color: string } {
+  let score = 0;
+  if (password.length >= 8) score += 1;
+  if (password.length >= 12) score += 1;
+  if (/[A-Z]/.test(password)) score += 1;
+  if (/[a-z]/.test(password)) score += 1;
+  if (/[0-9]/.test(password)) score += 1;
+  if (/[^A-Za-z0-9]/.test(password)) score += 1;
+
+  const scoreClamped = Math.min(score, 5);
+  const labels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
+  const colors = ['#EF4444', '#F97316', '#F59E0B', '#EAB308', '#84CC16', '#22C55E'];
+
+  return { score: scoreClamped, label: labels[scoreClamped], color: colors[scoreClamped] };
+}
+
+/** Validate a URL */
+export function isValidUrl(url: string): boolean {
+  if (!url) return false;
+  try {
+    new URL(url.startsWith('http') ? url : `https://${url}`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Debounce a function */
 export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number
@@ -134,28 +163,31 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
   };
 }
 
-export function parseAmount(value: string): number {
-  return parseFloat(value.replace(/[^0-9.-]/g, '')) || 0;
+/** Mask a password string */
+export function maskPassword(password: string, visibleChars = 0): string {
+  if (!password) return '';
+  if (visibleChars >= password.length) return password;
+  if (visibleChars > 0) {
+    const hidden = '•'.repeat(password.length - visibleChars);
+    return hidden + password.slice(-visibleChars);
+  }
+  return '•'.repeat(Math.max(password.length, 8));
 }
 
-export function formatCurrency(amount: number, currency = 'USD'): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+/** Sanitize a string for safe HTML rendering */
+export function sanitize(str: string): string {
+  return str.replace(/[<>]/g, '');
 }
 
-export function calculatePasswordStrength(password: string): { score: number; label: string } {
-  let score = 0;
-  if (password.length >= 8) score += 1;
-  if (password.length >= 12) score += 1;
-  if (/[A-Z]/.test(password)) score += 1;
-  if (/[a-z]/.test(password)) score += 1;
-  if (/[0-9]/.test(password)) score += 1;
-  if (/[^A-Za-z0-9]/.test(password)) score += 1;
+/** Capitalize first letter */
+export function capitalize(str: string): string {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
-  const labels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
-  return { score: Math.min(score, 5), label: labels[Math.min(score, 5)] };
+/** Check if value is empty */
+export function isEmpty(value: unknown): boolean {
+  return value === null || value === undefined || value === '' ||
+    (Array.isArray(value) && value.length === 0) ||
+    (typeof value === 'object' && value !== null && Object.keys(value).length === 0);
 }

@@ -1,42 +1,63 @@
-export type Theme = 'light' | 'dark' | 'system';
-export type AccentColor = 'sage' | 'clay' | 'slate' | 'moss' | 'stone';
+﻿// ============================================================================
+// Cova Type Definitions
+// ============================================================================
+
+/** Theme mode for the application */
+export type Theme = 'dark' | 'light';
+
+/** Cova accent color choices */
+export type AccentColor = 'violet' | 'blue' | 'green' | 'orange' | 'pink' | 'red';
+
+/** Font size preferences */
 export type FontSize = 'small' | 'medium' | 'large';
 
+/** Layout density */
+export type LayoutDensity = 'compact' | 'comfortable' | 'spacious';
+
+/** Status type for activities and items */
+export type ItemStatus = 'credentials' | 'notes' | 'tasks' | 'wallet';
+
+// ============================================================================
+// Core entities
+// ============================================================================
+
+/** Application user */
 export interface User {
   id: string;
   name: string;
+  displayName: string;
   email: string;
-  avatar?: string;
+  avatarInitial: string;
+  avatarUrl?: string;
   createdAt: string;
 }
 
+/** Password credential */
 export interface Credential {
   id: string;
-  title: string;
+  name: string;
   username: string;
   password: string;
-  url: string;
+  website: string;
   folderId?: string;
-  tags?: string[];
-  notes?: string;
+  tags: string[];
   favorite: boolean;
-  customFields?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
-  lastUsed?: string;
 }
 
+/** Secure note */
 export interface Note {
   id: string;
   title: string;
   content: string;
   folderId?: string;
   favorite: boolean;
-  tags?: string[];
   createdAt: string;
   updatedAt: string;
 }
 
+/** Task item */
 export interface Task {
   id: string;
   title: string;
@@ -44,94 +65,103 @@ export interface Task {
   dueDate?: string;
   priority: 'low' | 'medium' | 'high';
   status: 'todo' | 'in_progress' | 'done';
-  category?: string;
-  folderId?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface IncomeRecord {
+/** Wallet transaction (Philippine Peso PHP) */
+export interface WalletRecord {
   id: string;
   date: string;
   description: string;
   category: string;
   amount: number;
   type: 'income' | 'expense';
-  status: 'completed' | 'pending' | 'cancelled';
-  notes?: string;
   createdAt: string;
-  updatedAt: string;
 }
 
+/** Recent activity entry */
+export interface ActivityItem {
+  id: string;
+  type: ItemStatus;
+  title: string;
+  detail: string;
+  timestamp: string;
+}
+
+/** Folder for organization */
 export interface Folder {
   id: string;
   name: string;
-  parentId?: string;
   type: 'credentials' | 'notes' | 'tasks' | 'mixed';
-  color?: string;
-  icon?: string;
   createdAt: string;
-  updatedAt: string;
 }
 
-export interface ActivityItem {
-  id: string;
-  type: string;
-  title: string;
-  detail: string;
-  time: string;
-  iconName?: string;
-  color?: string;
-}
+// ============================================================================
+// Settings & navigation
+// ============================================================================
 
-export interface Settings {
+export interface AppSettings {
   theme: Theme;
   accentColor: AccentColor;
   fontSize: FontSize;
-  websiteIcons: boolean;
-  autoLock: number;
-  clipboardTimeout: number;
-  showPasswords: boolean;
-  confirmDelete: boolean;
-  masterPassword?: string;
-  recoveryEmail?: string;
+  layoutDensity: LayoutDensity;
+  language: string;
+  notifications: boolean;
   twoFactorEnabled: boolean;
   backupEnabled: boolean;
-  backupFrequency: 'daily' | 'weekly' | 'monthly';
-  language: string;
-  dateFormat: string;
-  timeFormat: '12h' | '24h';
-  lockOnBlur: boolean;
+  autoLock: boolean;
+  showPasswords: boolean;
 }
 
 export type NavItem = {
   id: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  iconName: IconName;
   href: string;
-  badge?: number | string;
-  group?: 'main' | 'tools' | 'bottom';
+  group: 'module' | 'sample' | 'security';
 };
 
-export type ViewMode = 'table' | 'cards' | 'list' | 'grid';
+/** Icon names from lucide-react used by nav */
+export type IconName =
+  | 'LayoutDashboard'
+  | 'Key'
+  | 'Wallet'
+  | 'PiggyBank'
+  | 'FileText'
+  | 'CheckSquare'
+  | 'Folder'
+  | 'Star'
+  | 'Calendar'
+  | 'Clock'
+  | 'KeyRound'
+  | 'Activity'
+  | 'Settings'
+  | 'Lock'
+  | 'Cloud'
+  | 'Copy'
+  | 'Eye'
+  | 'MoreVertical';
 
-export type SortDirection = 'asc' | 'desc';
+// ============================================================================
+// UI helper types
+// ============================================================================
 
 export interface SortState {
   field: string;
-  direction: SortDirection;
+  direction: 'asc' | 'desc';
 }
 
 export interface FilterState {
   search: string;
   category?: string;
-  status?: string;
   favorite?: boolean;
-  dateRange?: { start: string; end: string };
+  tag?: string;
 }
 
-export interface ModalState<T = unknown> {
-  isOpen: boolean;
-  data?: T;
-  mode: 'create' | 'edit' | 'view';
+export interface ToastMessage {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
+  duration?: number;
 }

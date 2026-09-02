@@ -1,26 +1,28 @@
 import { forwardRef, ButtonHTMLAttributes } from 'react';
 import { cn } from '@lib/utils';
 
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type ButtonSize = 'sm' | 'default' | 'lg' | 'icon';
+
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'icon';
-  size?: 'sm' | 'default' | 'lg' | 'icon';
+  variant?: ButtonVariant;
+  size?: ButtonSize;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'default', children, ...props }, ref) => {
-    const variants = {
+    const variants: Record<ButtonVariant, string> = {
       primary: 'btn-primary',
       secondary: 'btn-secondary',
       ghost: 'btn-ghost',
       danger: 'btn-danger',
-      icon: 'btn-icon',
     };
 
-    const sizes = {
-      sm: 'px-2.5 py-1 text-xs',
-      default: 'px-3 py-1.5 text-sm',
-      lg: 'px-4 py-2 text-base',
-      icon: 'p-1.5',
+    const sizes: Record<ButtonSize, string> = {
+      sm: 'px-3 py-1.5 text-xs',
+      default: 'px-4 py-2 text-sm',
+      lg: 'px-5 py-2.5 text-base',
+      icon: 'p-2',
     };
 
     return (

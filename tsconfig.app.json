@@ -15,7 +15,11 @@
       "@context/*": ["src/context/*"],
       "@pages/*": ["src/pages/*"],
       "@modals/*": ["src/modals/*"],
-      "@hooks/*": ["src/hooks/*"]
+      "@hooks/*": ["src/hooks/*"],
+      "@features/*": ["src/components/features/*"],
+      "@layout/*": ["src/components/layout/*"],
+      "@routes/*": ["src/routes/*"],
+      "@store": ["src/lib/store"]
     },
     "ignoreDeprecations": "6.0",
 

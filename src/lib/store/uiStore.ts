@@ -1,0 +1,49 @@
+﻿import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import type { ToastMessage } from '../types';
+import { generateId } from '../utils';
+
+interface UIState {
+  sidebarCollapsed: boolean;
+  searchQuery: string;
+  toasts: ToastMessage[];
+  passwordVisibility: Record<string, boolean>;
+  toggleSidebar: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  setSearchQuery: (query: string) => void;
+  addToast: (message: string, type?: ToastMessage['type']) => void;
+  removeToast: (id: string) => void;
+  togglePasswordVisibility: (id: string) => void;
+}
+
+export const useUIStore = create<UIState>()(
+  persist(
+    (set) => ({
+      sidebarCollapsed: false,
+      searchQuery: '',
+      toasts: [],
+      passwordVisibility: {},
+
+      toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+      setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+      setSearchQuery: (query) => set({ searchQuery: query }),
+
+      addToast: (message, type = 'info') => {
+        const id = generateId();
+        const toast: ToastMessage = { id, message, type, duration: 3500 };
+        set((s) => ({ toasts: [...s.toasts, toast] }));
+        setTimeout(() => {
+          set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+        }, toast.duration ?? 3500);
+      },
+
+      removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+
+      togglePasswordVisibility: (id) =>
+        set((s) => ({
+          passwordVisibility: { ...s.passwordVisibility, [id]: !s.passwordVisibility[id] },
+        })),
+    }),
+    { name: 'cova-ui-store' }
+  )
+);

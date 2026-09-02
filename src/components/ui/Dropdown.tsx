@@ -19,54 +19,42 @@ interface DropdownProps {
 export function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
-          triggerRef.current && !triggerRef.current.contains(e.target as Node)) {
+    const handleClick = (e: MouseEvent) => {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
+        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          setIsOpen(false);
-          triggerRef.current?.focus();
-        }
-      };
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
+    if (!isOpen) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setIsOpen(false); triggerRef.current?.focus(); } };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
   }, [isOpen]);
 
-  const toggle = () => setIsOpen(!isOpen);
-  const close = () => setIsOpen(false);
-
   const handleItemClick = (item: DropdownItem) => {
-    if (!item.disabled) {
-      item.onClick();
-      close();
-    }
+    if (!item.disabled) { item.onClick(); setIsOpen(false); }
   };
 
-  const dropdownContent = isOpen ? (
+  const content = isOpen ? (
     <div
       ref={dropdownRef}
       className={cn('dropdown animate-scale-in', align === 'right' ? 'right-0' : 'left-0')}
       role="menu"
     >
-      {items.map((item, index) => (
+      {items.map((item, i) => (
         <button
-          key={index}
+          key={i}
           role="menuitem"
-          tabIndex={-1}
           onClick={() => handleItemClick(item)}
           disabled={item.disabled}
           className={cn(
@@ -84,8 +72,10 @@ export function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
 
   return (
     <Fragment>
-      <span ref={triggerRef}>{trigger}</span>
-      {typeof window !== 'undefined' && dropdownContent && createPortal(dropdownContent, document.body)}
+      <span ref={triggerRef} onClick={() => setIsOpen(!isOpen)} className="cursor-pointer">
+        {trigger}
+      </span>
+      {typeof window !== 'undefined' && content && createPortal(content, document.body)}
     </Fragment>
   );
 }

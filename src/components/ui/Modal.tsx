@@ -1,7 +1,6 @@
-import { useEffect, useRef, ReactNode, Fragment } from 'react';
-import { cn } from '@lib/utils';
+import { useEffect, useRef, ReactNode } from 'react';
 import { X } from 'lucide-react';
-import { Button } from '@components/ui/Button';
+import { cn } from '@lib/utils';
 import { createPortal } from 'react-dom';
 
 interface ModalProps {
@@ -11,101 +10,65 @@ interface ModalProps {
   children: ReactNode;
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
-  closeOnOverlayClick?: boolean;
-  closeOnEscape?: boolean;
 }
 
 const sizeClasses = {
   sm: 'max-w-sm',
   md: 'max-w-md',
   lg: 'max-w-lg',
-  xl: 'max-w-xl',
+  xl: 'max-w-2xl',
 };
 
-export function Modal({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
-  footer, 
-  size = 'md', 
-  closeOnOverlayClick = true,
-  closeOnEscape = true,
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  footer,
+  size = 'md',
 }: ModalProps) {
   const contentRef = useRef<HTMLDivElement>(null);
-  const previousActiveElement = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      previousActiveElement.current = document.activeElement as HTMLElement;
-      document.body.style.overflow = 'hidden';
-      contentRef.current?.focus();
-    } else {
-      document.body.style.overflow = '';
-      previousActiveElement.current?.focus();
-    }
+    if (!isOpen) return;
+    document.body.style.overflow = 'hidden';
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handleKey);
     return () => {
       document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleKey);
     };
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
-  useEffect(() => {
-    if (!isOpen || !closeOnEscape) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, closeOnEscape, onClose]);
+  if (!isOpen || typeof window === 'undefined') return null;
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (closeOnOverlayClick && e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
-  const handleContentClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-
-  if (!isOpen) return null;
-
-  const modalContent = (
-    <div 
-      className="modal-overlay animate-fade-in" 
-      onClick={handleOverlayClick}
+  const content = (
+    <div
+      className="modal-overlay"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
-      <div
-        ref={contentRef}
-        tabIndex={-1}
-        className={cn('modal-content animate-scale-in', sizeClasses[size])}
-        onClick={handleContentClick}
-      >
+      <div ref={contentRef} className={cn('modal-content', sizeClasses[size])}>
         <div className="modal-header">
-          <h2 id="modal-title" className="text-sm font-semibold text-light-text dark:text-dark-text">
+          <h2 id="modal-title" className="text-base font-semibold text-cova-text">
             {title}
           </h2>
-          <Button variant="icon" onClick={onClose} aria-label="Close modal">
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded text-cova-textMuted hover:bg-cova-surfaceHover hover:text-cova-text transition-colors"
+            aria-label="Close modal"
+          >
             <X className="w-4 h-4" />
-          </Button>
+          </button>
         </div>
-        <div className="modal-body">
-          {children}
-        </div>
-        {footer && (
-          <div className="modal-footer">
-            {footer}
-          </div>
-        )}
+        <div className="modal-body">{children}</div>
+        {footer && <div className="modal-footer">{footer}</div>}
       </div>
     </div>
   );
 
-  if (typeof window === 'undefined') return null;
-  return createPortal(modalContent, document.body);
+  return createPortal(content, document.body);
 }
