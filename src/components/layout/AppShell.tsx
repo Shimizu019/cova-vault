@@ -58,7 +58,15 @@ export function AppShell() {
 
           {/* User */}
           <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-cova-surfaceHover transition-colors cursor-pointer">
-            <Avatar initial={user.avatarInitial} />
+            {user.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt="User avatar"
+                className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <Avatar initial={user.avatarInitial} />
+            )}
             <div className="hidden md:flex flex-col text-left">
               <span className="text-sm font-medium text-cova-text leading-tight">{user.displayName}</span>
               <span className="text-xs text-cova-textMuted leading-tight">{user.email}</span>

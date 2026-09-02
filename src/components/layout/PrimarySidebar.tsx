@@ -160,7 +160,13 @@ export function PrimarySidebar({ collapsed }: PrimarySidebarProps) {
           </div>
           <h4 className="text-sm font-semibold text-cova-text mb-1">Upgrade Pro</h4>
           <p className="text-xs text-cova-textMuted mb-3">Unlock 2FA, backup and more.</p>
-          <button className="w-full text-xs py-1.5 rounded-lg bg-cova-primary hover:bg-cova-primaryHover text-white font-medium transition-colors">
+          <button
+            className="w-full text-xs py-1.5 rounded-lg bg-cova-primary hover:bg-cova-primaryHover text-white font-medium transition-colors"
+            onClick={() => {
+              const { addToast } = useUIStore.getState();
+              addToast('Upgrade to Pro — coming soon!', 'info');
+            }}
+          >
             Upgrade
           </button>
         </div>

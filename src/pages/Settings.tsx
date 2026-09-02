@@ -10,7 +10,7 @@ import { DataSection } from '@features/settings/DataSection';
 export function Settings() {
   const { settings, updateSettings } = useSettingsStore();
 
-  const [profileName] = useState(settings.theme ? 'Cova User' : 'Cova User');
+  const [profileName, setProfileName] = useState('Cova User');
   const [profileEmail, setProfileEmail] = useState('user@cova.app');
   const [profileDisplayName, setProfileDisplayName] = useState('Cova User');
 
@@ -26,7 +26,7 @@ export function Settings() {
           profileName={profileName}
           profileEmail={profileEmail}
           profileDisplayName={profileDisplayName}
-          onNameChange={() => {}}
+          onNameChange={setProfileName}
           onEmailChange={setProfileEmail}
           onDisplayNameChange={setProfileDisplayName}
         />

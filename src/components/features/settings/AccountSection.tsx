@@ -30,17 +30,53 @@ export function AccountSection({ profileName, profileEmail, profileDisplayName, 
       </div>
       <div className="p-5 space-y-5">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-xl flex items-center justify-center">
-            {getInitials(user.displayName)}
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-xl flex items-center justify-center overflow-hidden">
+            {user.avatarUrl ? (
+              <img src={user.avatarUrl} alt="User avatar" className="w-full h-full object-cover" />
+            ) : (
+              getInitials(user.displayName)
+            )}
           </div>
-          <button className="btn btn-secondary text-sm">
+          <button
+            type="button"
+            className="btn btn-secondary text-sm"
+            onClick={() => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = 'image/*';
+              input.onchange = (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (!file) return;
+                if (!file.type.startsWith('image/')) {
+                  addToast('Please select an image file', 'error');
+                  return;
+                }
+                if (file.size > 2 * 1024 * 1024) {
+                  addToast('Image must be smaller than 2 MB', 'error');
+                  return;
+                }
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                  const url = ev.target?.result as string;
+                  updateUser({ avatarUrl: url });
+                  addToast('Avatar updated', 'success');
+                };
+                reader.readAsDataURL(file);
+              };
+              input.click();
+            }}
+          >
             <Camera className="w-4 h-4" /> Change Avatar
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="profile-name">Name</Label>
+            <Input id="profile-name" value={profileName} onChange={(e) => onNameChange(e.target.value)} placeholder="Your name" />
+          </div>
           <div>
             <Label htmlFor="profile-display">Display Name</Label>
-            <Input id="profile-display" value={profileDisplayName} onChange={(e) => onDisplayNameChange(e.target.value)} placeholder="Your name" />
+            <Input id="profile-display" value={profileDisplayName} onChange={(e) => onDisplayNameChange(e.target.value)} placeholder="Display name" />
           </div>
           <div>
             <Label htmlFor="profile-email">Email</Label>
