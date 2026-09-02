@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '@lib/utils';
-import { User, Palette, Bell, Globe, Shield, Monitor, Database, Trash2 } from 'lucide-react';
+import { User, Palette, Globe, Shield, Database, Trash2 } from 'lucide-react';
 
 interface SettingsSection {
   id: string;
@@ -17,7 +17,6 @@ const sections: SettingsSection[] = [
     items: [
       { id: 'account', label: 'Account', href: '/settings#account' },
       { id: 'appearance', label: 'Appearance', href: '/settings#appearance' },
-      { id: 'notifications', label: 'Notifications', href: '/settings#notifications' },
       { id: 'language', label: 'Language', href: '/settings#language' },
     ],
   },
