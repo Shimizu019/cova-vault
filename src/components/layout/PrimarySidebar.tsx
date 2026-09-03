@@ -133,7 +133,7 @@ export function PrimarySidebar({ collapsed }: PrimarySidebarProps) {
       aria-label="Primary navigation"
     >
       {/* Logo */}
-      <div className={cn('flex items-center py-5 border-b border-cova-sidebarBorder', collapsed ? 'justify-center px-2' : 'px-4')}>
+      <div className={cn('flex items-center justify-center py-5 border-b border-cova-sidebarBorder', collapsed ? 'px-2' : 'px-4')}>
         <img
           src={collapsed ? lockLogo : CovaLogo}
           alt="Cova"
