@@ -1,47 +1,160 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { WalletRecord } from '../types';
+import type { WalletRecord, Budget } from '../types';
 import { generateId } from '../utils';
 
-interface WalletState {
+export interface WalletState {
   records: WalletRecord[];
-
-  addRecord: (record: Omit<WalletRecord, 'id' | 'createdAt'>) => WalletRecord;
+  startingBalance: number;
+  budgets: Budget[];
+  setStartingBalance: (amount: number) => void;
+  addRecord: (record: Omit<WalletRecord, "id" | "createdAt" | "updatedAt">) => WalletRecord;
   updateRecord: (id: string, updates: Partial<WalletRecord>) => void;
   deleteRecord: (id: string) => void;
   getBalance: () => number;
   getMonthlyIncome: () => number;
   getMonthlyExpense: () => number;
+  getTodaysExpense: () => number;
+  getWeeklyExpense: () => number;
+  getSpendingByCategory: () => Array<{ category: string; amount: number }>;
+  getIncomeByCategory: () => Array<{ category: string; amount: number }>;
+  getBudgetProgress: (category: string) => { budget: number; spent: number; remaining: number; percentage: string } | null;
+  setBudget: (budget: Budget) => void;
+  updateBudget: (id: string, limit: number) => void;
+  deleteBudget: (id: string) => void;
 }
 
 export const useWalletStore = create<WalletState>()(
   persist(
     (set, get) => ({
       records: [],
-
+      startingBalance: 0,
+      budgets: [],
+      setStartingBalance: (amount) => set((s) => {
+        const filtered = s.records.filter((r) => r.id !== "starting-balance");
+        const now = new Date().toISOString();
+        const date = now.split("T")[0];
+        const time = now.split("T")[1].split(".")[0];
+        const startingRecord: WalletRecord = {
+          id: "starting-balance",
+          date,
+          time,
+          description: "Starting Balance",
+          category: "salary",
+          amount,
+          type: "income",
+          cashGiven: 0,
+          change: 0,
+          note: "Initial starting balance",
+          createdAt: now,
+          updatedAt: now,
+        };
+        return {
+          startingBalance: amount,
+          records: [...filtered, startingRecord],
+        };
+      }),
       addRecord: (record) => {
-        const newRecord: WalletRecord = { ...record, id: generateId(), createdAt: new Date().toISOString() };
-        set((s) => ({ records: [newRecord, ...s.records] }));
+        const now = new Date().toISOString();
+        const newRecord: WalletRecord = {
+          ...record,
+          id: generateId(),
+          createdAt: now,
+          updatedAt: now,
+        };
+        set((s) => ({ records: [...s.records, newRecord] }));
         return newRecord;
       },
-
-      updateRecord: (id, updates) =>
-        set((s) => ({ records: s.records.map((r) => (r.id === id ? { ...r, ...updates } : r)) })),
-
+      updateRecord: (id, updates) => {
+        set((s) => ({
+          records: s.records.map((r) =>
+            r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r
+          ),
+        }));
+      },
       deleteRecord: (id) => set((s) => ({ records: s.records.filter((r) => r.id !== id) })),
-
-      getBalance: () => get().records.reduce((sum, r) => sum + (r.type === 'income' ? r.amount : -r.amount), 0),
-
+      getBalance: () => {
+        return get().records.reduce((sum, r) => {
+          return sum + (r.type === "income" ? r.amount : -r.amount);
+        }, 0);
+      },
       getMonthlyIncome: () => {
         const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-        return get().records.filter((r) => r.type === 'income' && r.date >= startOfMonth).reduce((sum, r) => sum + r.amount, 0);
+        return get().records
+          .filter((r) => r.type === "income" && r.date >= startOfMonth && r.id !== "starting-balance")
+          .reduce((sum, r) => sum + r.amount, 0);
       },
-
       getMonthlyExpense: () => {
         const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-        return get().records.filter((r) => r.type === 'expense' && r.date >= startOfMonth).reduce((sum, r) => sum + r.amount, 0);
+        return get().records
+          .filter((r) => r.type === "expense" && r.date >= startOfMonth)
+          .reduce((sum, r) => sum + r.amount, 0);
+      },
+      getTodaysExpense: () => {
+        const today = new Date().toISOString().split("T")[0];
+        return get().records
+          .filter((r) => r.type === "expense" && r.date === today)
+          .reduce((sum, r) => sum + r.amount, 0);
+      },
+      getWeeklyExpense: () => {
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        return get().records
+          .filter((r) => r.type === "expense" && r.date >= sevenDaysAgo)
+          .reduce((sum, r) => sum + r.amount, 0);
+      },
+      getSpendingByCategory: () => {
+        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+        const map: Record<string, number> = {};
+        get().records
+          .filter((r) => r.type === "expense" && r.date >= startOfMonth)
+          .forEach((r) => {
+            map[r.category] = (map[r.category] || 0) + r.amount;
+          });
+        return Object.entries(map)
+          .map(([category, amount]) => ({ category, amount }))
+          .sort((a, b) => b.amount - a.amount);
+      },
+      getIncomeByCategory: () => {
+        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+        const map: Record<string, number> = {};
+        get().records
+          .filter((r) => r.type === "income" && r.date >= startOfMonth && r.id !== "starting-balance")
+          .forEach((r) => {
+            map[r.category] = (map[r.category] || 0) + r.amount;
+          });
+        return Object.entries(map)
+          .map(([category, amount]) => ({ category, amount }))
+          .sort((a, b) => b.amount - a.amount);
+      },
+      getBudgetProgress: (category) => {
+        const budget = get().budgets.find((b) => b.category === category);
+        if (!budget) return null;
+        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+        const spent = get().records
+          .filter((r) => r.category === category && r.type === "expense" && r.date >= startOfMonth)
+          .reduce((sum, r) => sum + r.amount, 0);
+        const remaining = budget.limit - spent;
+        const percentage = budget.limit > 0 ? ((Math.min(spent, budget.limit) / budget.limit) * 100).toFixed(1) : "0";
+        return {
+          budget: budget.limit,
+          spent,
+          remaining,
+          percentage,
+        };
+      },
+      setBudget: (budget) => {
+        set((s) => ({ budgets: [...s.budgets, budget] }));
+      },
+      updateBudget: (id, limit) => {
+        set((s) => ({
+          budgets: s.budgets.map((b) => (b.id === id ? { ...b, limit, updatedAt: new Date().toISOString() } : b)),
+        }));
+      },
+      deleteBudget: (id) => {
+        set((s) => ({ budgets: s.budgets.filter((b) => b.id !== id) }));
       },
     }),
-    { name: 'cova-wallet-store' }
+    { name: "cova-wallet-store" }
   )
 );

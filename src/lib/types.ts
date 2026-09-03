@@ -84,15 +84,29 @@ export interface Task {
   updatedAt: string;
 }
 
+/** Budget for a spending category */
+export interface Budget {
+  id: string;
+  category: string;
+  limit: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** Wallet transaction (Philippine Peso PHP) */
 export interface WalletRecord {
   id: string;
   date: string;
+  time: string;
   description: string;
   category: string;
   amount: number;
   type: 'income' | 'expense';
+  cashGiven?: number;
+  change?: number;
+  note?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 /** Recent activity entry */

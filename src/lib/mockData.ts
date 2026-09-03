@@ -76,16 +76,11 @@ export const mockTasks: Task[] = [
 ];
 
 export const mockWalletRecords: WalletRecord[] = [
-  { id: 'wallet-1', date: '2024-03-20', description: 'Monthly Salary', category: 'Salary',
-    amount: 65000, type: 'income', createdAt: '2024-03-20T10:00:00Z' },
-  { id: 'wallet-2', date: '2024-03-18', description: 'Freelance Project', category: 'Freelance',
-    amount: 12500, type: 'income', createdAt: '2024-03-18T14:00:00Z' },
-  { id: 'wallet-3', date: '2024-03-19', description: 'Groceries SM Supermarket', category: 'Food',
-    amount: 2450.75, type: 'expense', createdAt: '2024-03-19T11:00:00Z' },
-  { id: 'wallet-4', date: '2024-03-15', description: 'Internet and Utilities', category: 'Utilities',
-    amount: 2156.78, type: 'expense', createdAt: '2024-03-15T10:00:00Z' },
-  { id: 'wallet-5', date: '2024-03-10', description: 'Coffee and Snacks', category: 'Food',
-    amount: 580, type: 'expense', createdAt: '2024-03-10T15:00:00Z' },
+  { id: 'wallet-1', date: '2024-03-20', time: '10:00', description: 'Monthly Salary', category: 'Salary', amount: 65000, type: 'income', createdAt: '2024-03-20T10:00:00Z', updatedAt: '2024-03-20T10:00:00Z' },
+  { id: 'wallet-2', date: '2024-03-18', time: '14:00', description: 'Freelance Project', category: 'Freelance', amount: 12500, type: 'income', createdAt: '2024-03-18T14:00:00Z', updatedAt: '2024-03-18T14:00:00Z' },
+  { id: 'wallet-3', date: '2024-03-19', time: '11:00', description: 'Groceries SM Supermarket', category: 'Food', amount: 2450.75, type: 'expense', cashGiven: 3000, change: 549.25, createdAt: '2024-03-19T11:00:00Z', updatedAt: '2024-03-19T11:00:00Z' },
+  { id: 'wallet-4', date: '2024-03-15', time: '10:00', description: 'Internet and Utilities', category: 'Bills', amount: 2156.78, type: 'expense', createdAt: '2024-03-15T10:00:00Z', updatedAt: '2024-03-15T10:00:00Z' },
+  { id: 'wallet-5', date: '2024-03-10', time: '15:00', description: 'Coffee and Snacks', category: 'Food', amount: 580, type: 'expense', cashGiven: 1000, change: 420, note: 'Morning coffee at cafe', createdAt: '2024-03-10T15:00:00Z', updatedAt: '2024-03-10T15:00:00Z' },
 ];
 
 export const mockActivities: ActivityItem[] = [
@@ -110,3 +105,4 @@ export const defaultSettings: AppSettings = {
   autoLock: false,
   showPasswords: false,
 };
+
