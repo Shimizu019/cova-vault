@@ -1,7 +1,8 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import type { WalletRecord, Budget } from '../types';
-import { generateId } from '../utils';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { WalletRecord, Budget, ActivityItem } from "../types";
+import { generateId, formatPHP } from "../utils";
+import { useCredentialStore } from "./credentialStore";
 
 export interface WalletState {
   records: WalletRecord[];
@@ -24,36 +25,52 @@ export interface WalletState {
   deleteBudget: (id: string) => void;
 }
 
+/** Helper to add a wallet activity to the credential store */
+const pushActivity = (activity: Omit<ActivityItem, "id" | "timestamp">) => {
+  try {
+    useCredentialStore.getState().addActivity(activity);
+  } catch (e) {
+    // silently fail if store is not yet initialized
+  }
+};
+
 export const useWalletStore = create<WalletState>()(
   persist(
     (set, get) => ({
       records: [],
       startingBalance: 0,
       budgets: [],
-      setStartingBalance: (amount) => set((s) => {
-        const filtered = s.records.filter((r) => r.id !== "starting-balance");
-        const now = new Date().toISOString();
-        const date = now.split("T")[0];
-        const time = now.split("T")[1].split(".")[0];
-        const startingRecord: WalletRecord = {
-          id: "starting-balance",
-          date,
-          time,
-          description: "Starting Balance",
-          category: "salary",
-          amount,
-          type: "income",
-          cashGiven: 0,
-          change: 0,
-          note: "Initial starting balance",
-          createdAt: now,
-          updatedAt: now,
-        };
-        return {
-          startingBalance: amount,
-          records: [...filtered, startingRecord],
-        };
-      }),
+      setStartingBalance: (amount) => {
+        set((s) => {
+          const filtered = s.records.filter((r) => r.id !== "starting-balance");
+          const now = new Date().toISOString();
+          const date = now.split("T")[0];
+          const time = now.split("T")[1].split(".")[0];
+          const startingRecord: WalletRecord = {
+            id: "starting-balance",
+            date,
+            time,
+            description: "Starting Balance",
+            category: "Salary",
+            amount,
+            type: "income",
+            cashGiven: 0,
+            change: 0,
+            note: "Initial starting balance",
+            createdAt: now,
+            updatedAt: now,
+          };
+          return {
+            startingBalance: amount,
+            records: [...filtered, startingRecord],
+          };
+        });
+        pushActivity({
+          type: "wallet",
+          title: "Wallet created",
+          detail: "Set starting balance to " + formatPHP(amount),
+        });
+      },
       addRecord: (record) => {
         const now = new Date().toISOString();
         const newRecord: WalletRecord = {
@@ -63,6 +80,11 @@ export const useWalletStore = create<WalletState>()(
           updatedAt: now,
         };
         set((s) => ({ records: [...s.records, newRecord] }));
+        pushActivity({
+          type: "wallet",
+          title: newRecord.type === "income" ? "Income recorded" : "Expense recorded",
+          detail: newRecord.description + " " + formatPHP(newRecord.amount),
+        });
         return newRecord;
       },
       updateRecord: (id, updates) => {
@@ -71,8 +93,26 @@ export const useWalletStore = create<WalletState>()(
             r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r
           ),
         }));
+        const rec = get().records.find((r) => r.id === id);
+        if (rec) {
+          pushActivity({
+            type: "wallet",
+            title: "Transaction updated",
+            detail: rec.description + " " + formatPHP(rec.amount),
+          });
+        }
       },
-      deleteRecord: (id) => set((s) => ({ records: s.records.filter((r) => r.id !== id) })),
+      deleteRecord: (id) => {
+        const rec = get().records.find((r) => r.id === id);
+        set((s) => ({ records: s.records.filter((r) => r.id !== id) }));
+        if (rec) {
+          pushActivity({
+            type: "wallet",
+            title: rec.type === "income" ? "Income deleted" : "Expense deleted",
+            detail: rec.description + " " + formatPHP(rec.amount),
+          });
+        }
+      },
       getBalance: () => {
         return get().records.reduce((sum, r) => {
           return sum + (r.type === "income" ? r.amount : -r.amount);
@@ -145,14 +185,35 @@ export const useWalletStore = create<WalletState>()(
       },
       setBudget: (budget) => {
         set((s) => ({ budgets: [...s.budgets, budget] }));
+        pushActivity({
+          type: "wallet",
+          title: "Budget created",
+          detail: budget.category + " limit " + formatPHP(budget.limit),
+        });
       },
       updateBudget: (id, limit) => {
         set((s) => ({
           budgets: s.budgets.map((b) => (b.id === id ? { ...b, limit, updatedAt: new Date().toISOString() } : b)),
         }));
+        const bud = get().budgets.find((b) => b.id === id);
+        if (bud) {
+          pushActivity({
+            type: "wallet",
+            title: "Budget updated",
+            detail: bud.category + " limit " + formatPHP(limit),
+          });
+        }
       },
       deleteBudget: (id) => {
+        const bud = get().budgets.find((b) => b.id === id);
         set((s) => ({ budgets: s.budgets.filter((b) => b.id !== id) }));
+        if (bud) {
+          pushActivity({
+            type: "wallet",
+            title: "Budget deleted",
+            detail: bud.category,
+          });
+        }
       },
     }),
     { name: "cova-wallet-store" }
