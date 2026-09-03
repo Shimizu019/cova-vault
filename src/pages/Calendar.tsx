@@ -48,7 +48,7 @@ export function Calendar() {
   const isToday = (d: Date) => d.toDateString() === today.toDateString();
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-cova-text flex items-center gap-2">
@@ -66,21 +66,27 @@ export function Calendar() {
 
       <div className="card overflow-hidden">
         <div className="grid grid-cols-7">
-          {DAYS.map((d) => <div key={d} className="px-2 py-3 text-center text-xs font-semibold text-cova-textMuted uppercase border-b border-cova-border">{d}</div>)}
+          {DAYS.map((d) => <div key={d} className="px-1 sm:px-2 py-2 sm:py-3 text-center text-[10px] sm:text-xs font-semibold text-cova-textMuted uppercase border-b border-cova-border">{d}</div>)}
           {calDays.map((day, i) => {
-            if (!day) return <div key={'e'+i} className="min-h-[96px] border-b border-r border-cova-border/50" />;
+            if (!day) return <div key={'e'+i} className="min-h-[64px] sm:min-h-[96px] border-b border-r border-cova-border/50" />;
             const key = day.toISOString().split('T')[0];
             const dayTasks = tasksByDate[key] || [];
             return (
-              <div key={key} className={`min-h-[96px] border-b border-r border-cova-border/50 p-1.5 ${isToday(day) ? 'bg-cova-primary/5' : ''}`}>
-                <span className={`inline-flex w-6 h-6 items-center justify-center rounded-full text-xs font-medium mb-1 ${isToday(day) ? 'bg-cova-primary text-white' : 'text-cova-textSecondary'}`}>
+              <div key={key} className={`min-h-[64px] sm:min-h-[96px] border-b border-r border-cova-border/50 p-1 sm:p-1.5 ${isToday(day) ? 'bg-cova-primary/5' : ''}`}>
+                <span className={`inline-flex w-5 h-5 sm:w-6 sm:h-6 items-center justify-center rounded-full text-[10px] sm:text-xs font-medium mb-0.5 sm:mb-1 ${isToday(day) ? 'bg-cova-primary text-white' : 'text-cova-textSecondary'}`}>
                   {day.getDate()}
                 </span>
-                <div className="space-y-0.5">
+                <div className="space-y-0.5 hidden sm:block">
                   {dayTasks.slice(0, 3).map((t) => (
                     <div key={t.id} className={'text-[10px] px-1 py-0.5 rounded truncate font-medium text-white ' + PRIORITY_BARS[t.priority]} title={t.title}>{t.title}</div>
                   ))}
                   {dayTasks.length > 3 && <div className="text-[10px] text-cova-textMuted px-1">+{dayTasks.length - 3} more</div>}
+                </div>
+                {/* Mobile: just show a dot if there are tasks */}
+                <div className="sm:hidden">
+                  {dayTasks.length > 0 && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-cova-primary mx-auto" />
+                  )}
                 </div>
               </div>
             );

@@ -42,7 +42,7 @@ export function Schedule() {
   const isPast = (d: Date) => d < new Date(today.toDateString());
 
   return (
-    <div className="p-6 max-w-full mx-auto overflow-x-auto">
+    <div className="p-4 sm:p-6 max-w-full mx-auto overflow-x-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-cova-text flex items-center gap-2">

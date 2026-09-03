@@ -23,7 +23,7 @@ const sections: SettingsSection[] = [
 export function SecondarySidebar() {
   return (
     <nav
-      className="w-56 flex-shrink-0 bg-cova-surface border-r border-cova-border h-full overflow-y-auto scrollbar-thin py-4"
+      className="hidden md:block w-56 flex-shrink-0 bg-cova-surface border-r border-cova-border h-full overflow-y-auto scrollbar-thin py-4"
       aria-label="Settings navigation"
     >
       {sections.map((section) => {

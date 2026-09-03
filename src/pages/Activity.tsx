@@ -16,7 +16,7 @@ export function Activity() {
   const sorted = useMemo(() => [...activities].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()), [activities]);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-cova-text flex items-center gap-2">
           <ActivityIcon className="w-5 h-5 text-cova-primary" aria-hidden="true" />

@@ -12,7 +12,7 @@ export function Generator() {
   useEffect(() => { refresh(); }, [length, options]); // eslint-disable-line
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="mb-8">
         <h1 className="text-xl font-bold text-cova-text flex items-center gap-2">
           <KeyRound className="w-5 h-5 text-cova-primary" />
