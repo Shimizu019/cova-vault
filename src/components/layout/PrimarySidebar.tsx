@@ -6,6 +6,7 @@ import {
 import { cn } from '@lib/utils';
 import { useUIStore } from '@store';
 import CovaLogo from '@/assets/image/CovaLogo.png';
+import lockLogo from '@/assets/image/lockLogo.png';
 import type { ComponentType } from 'react';
 
 interface NavLinkSpec {
@@ -132,11 +133,11 @@ export function PrimarySidebar({ collapsed }: PrimarySidebarProps) {
       aria-label="Primary navigation"
     >
       {/* Logo */}
-      <div className={cn('flex items-center gap-2.5 px-4 py-5 border-b border-cova-sidebarBorder', collapsed ? 'justify-center px-2' : 'px-4')}>
+      <div className={cn('flex items-center py-5 border-b border-cova-sidebarBorder', collapsed ? 'justify-center px-2' : 'px-4')}>
         <img
-          src={CovaLogo}
+          src={collapsed ? lockLogo : CovaLogo}
           alt="Cova"
-          className={cn('flex-shrink-0', collapsed ? 'w-10 h-10' : 'h-9 w-auto')}
+          className={cn('flex-shrink-0', collapsed ? 'w-9 h-9' : 'h-9 w-auto')}
         />
       </div>
 
