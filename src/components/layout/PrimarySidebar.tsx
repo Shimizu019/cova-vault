@@ -137,7 +137,7 @@ export function PrimarySidebar({ collapsed }: PrimarySidebarProps) {
         <img
           src={collapsed ? lockLogo : CovaLogo}
           alt="Cova"
-          className={cn('flex-shrink-0', collapsed ? 'w-9 h-9' : 'h-9 w-auto')}
+          className={cn('flex-shrink-0', collapsed ? 'w-10 h-10' : 'h-11 w-auto')}
         />
       </div>
 
