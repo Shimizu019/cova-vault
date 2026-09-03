@@ -18,6 +18,7 @@ interface DropdownProps {
 
 export function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left?: number; right?: number }>({ top: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLSpanElement>(null);
 
@@ -36,6 +37,29 @@ export function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
 
   useEffect(() => {
     if (!isOpen) return;
+    const updatePosition = () => {
+      const triggerRect = triggerRef.current?.getBoundingClientRect();
+      if (!triggerRect) return;
+
+      setPosition({
+        top: triggerRect.bottom + 4,
+        ...(align === 'right'
+          ? { right: window.innerWidth - triggerRect.right }
+          : { left: triggerRect.left }),
+      });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [isOpen, align]);
+
+  useEffect(() => {
+    if (!isOpen) return;
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setIsOpen(false); triggerRef.current?.focus(); } };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
@@ -48,7 +72,8 @@ export function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
   const content = isOpen ? (
     <div
       ref={dropdownRef}
-      className={cn('dropdown animate-scale-in', align === 'right' ? 'right-0' : 'left-0')}
+      className="dropdown animate-scale-in"
+      style={{ position: 'fixed', top: position.top, left: position.left, right: position.right }}
       role="menu"
     >
       {items.map((item, i) => (

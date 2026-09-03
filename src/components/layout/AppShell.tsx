@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useUIStore } from '@store';
 import { PrimarySidebar } from './PrimarySidebar';
@@ -12,6 +12,7 @@ export function AppShell() {
   const location = useLocation();
   const { sidebarCollapsed, toggleSidebar, toasts, removeToast, searchQuery, setSearchQuery } = useUIStore();
   const { user } = useSettingsStore();
+  const [settingsNavOpen, setSettingsNavOpen] = useState(true);
 
   // Auto-collapse sidebar when on settings route (per spec)
   const shouldCollapse = sidebarCollapsed || location.pathname.startsWith('/settings');
@@ -26,16 +27,24 @@ export function AppShell() {
     <div className="flex h-screen w-full bg-cova-bg text-cova-text overflow-hidden">
       <PrimarySidebar collapsed={shouldCollapse} />
 
-      {showSecondarySidebar && <SecondarySidebar />}
+      {showSecondarySidebar && settingsNavOpen && <SecondarySidebar />}
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Topbar */}
         <header className="flex-shrink-0 bg-cova-bg border-b border-cova-border px-4 py-3 flex items-center gap-3">
           <button
             type="button"
-            onClick={toggleSidebar}
+            onClick={() => {
+              if (showSecondarySidebar) {
+                setSettingsNavOpen((open) => !open);
+              } else {
+                toggleSidebar();
+              }
+            }}
             className="p-2 rounded-lg text-cova-textSecondary hover:bg-cova-surfaceHover hover:text-cova-text transition-colors"
-            aria-label={shouldCollapse ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={showSecondarySidebar
+              ? (settingsNavOpen ? 'Hide settings navigation' : 'Show settings navigation')
+              : (shouldCollapse ? 'Expand sidebar' : 'Collapse sidebar')}
           >
             <Menu className="w-4 h-4" />
           </button>

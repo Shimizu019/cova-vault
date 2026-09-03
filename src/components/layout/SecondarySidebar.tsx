@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '@lib/utils';
-import { User, Palette, Globe, Shield, Database, Trash2 } from 'lucide-react';
+import { User } from 'lucide-react';
 
 interface SettingsSection {
   id: string;
@@ -16,37 +16,6 @@ const sections: SettingsSection[] = [
     icon: User,
     items: [
       { id: 'account', label: 'Account', href: '/settings#account' },
-      { id: 'appearance', label: 'Appearance', href: '/settings#appearance' },
-      { id: 'language', label: 'Language', href: '/settings#language' },
-    ],
-  },
-  {
-    id: 'security',
-    title: 'Security',
-    icon: Shield,
-    items: [
-      { id: '2fa', label: '2FA', href: '/settings#2fa' },
-      { id: 'sessions', label: 'Sessions', href: '/settings#sessions' },
-      { id: 'privacy', label: 'Privacy', href: '/settings#privacy' },
-    ],
-  },
-  {
-    id: 'data',
-    title: 'Data',
-    icon: Database,
-    items: [
-      { id: 'backup', label: 'Backup', href: '/settings#backup' },
-      { id: 'import', label: 'Import', href: '/settings#import' },
-      { id: 'export', label: 'Export', href: '/settings#export' },
-    ],
-  },
-  {
-    id: 'danger',
-    title: 'Danger Zone',
-    icon: Trash2,
-    items: [
-      { id: 'clear-activities', label: 'Clear All Activities', href: '/settings#clear-activities' },
-      { id: 'delete-all', label: 'Delete All Data', href: '/settings#delete-all' },
     ],
   },
 ];
