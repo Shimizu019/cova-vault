@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@lib/utils';
 import { useUIStore } from '@store';
-import lockLogo from '@/assets/image/lockLogo.png';
+import CovaLogo from '@/assets/image/CovaLogo.png';
 import type { ComponentType } from 'react';
 
 interface NavLinkSpec {
@@ -132,18 +132,12 @@ export function PrimarySidebar({ collapsed }: PrimarySidebarProps) {
       aria-label="Primary navigation"
     >
       {/* Logo */}
-      <div className={cn('flex items-center gap-2.5 px-4 py-5 border-b border-cova-sidebarBorder', collapsed && 'justify-center px-2')}>
+      <div className={cn('flex items-center gap-2.5 px-4 py-5 border-b border-cova-sidebarBorder', collapsed ? 'justify-center px-2' : 'px-4')}>
         <img
-          src={lockLogo}
+          src={CovaLogo}
           alt="Cova"
-          className={cn('flex-shrink-0', collapsed ? 'w-9 h-9' : 'w-8 h-8')}
+          className={cn('flex-shrink-0', collapsed ? 'w-10 h-10' : 'h-9 w-auto')}
         />
-        {!collapsed && (
-          <div className="flex flex-col">
-            <span className="text-sm font-bold text-cova-text">Cova</span>
-            <span className="text-[10px] text-cova-textMuted">Safe Vault</span>
-          </div>
-        )}
       </div>
 
       <div className="px-3 py-4">
