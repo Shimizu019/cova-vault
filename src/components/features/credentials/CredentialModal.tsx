@@ -1,8 +1,8 @@
-import { Modal } from '@components/ui/Modal';
-import { Button } from '@components/ui/Button';
-import { useCredentialStore, useUIStore } from '@store';
-import { CredentialForm } from './CredentialModalForm';
-import type { Credential } from '@lib/types';
+import { Modal } from "@components/ui/Modal";
+import { Button } from "@components/ui/Button";
+import { useCredentialStore, useUIStore } from "@store";
+import { CredentialForm } from "./CredentialModalForm";
+import type { Credential } from "@lib/types";
 
 interface CredentialModalProps {
   isOpen: boolean;
@@ -14,13 +14,13 @@ export function CredentialModal({ isOpen, onClose, editCredential }: CredentialM
   const { addCredential, updateCredential } = useCredentialStore();
   const { addToast } = useUIStore();
 
-  const handleSubmit = (data: { name: string; username: string; password: string; website: string; tags: string[] }) => {
+  const handleSubmit = (data: { name: string; username: string; password: string; website: string; tags: string[]; folderId?: string }) => {
     if (editCredential) {
       updateCredential(editCredential.id, data);
-      addToast('Credential updated successfully', 'success');
+      addToast("Credential updated successfully", "success");
     } else {
       addCredential({ ...data, favorite: false });
-      addToast('Credential created successfully', 'success');
+      addToast("Credential created successfully", "success");
     }
     onClose();
   };
@@ -29,13 +29,13 @@ export function CredentialModal({ isOpen, onClose, editCredential }: CredentialM
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={editCredential ? 'Edit Credential' : 'New Credential'}
+      title={editCredential ? "Edit Credential" : "New Credential"}
       size="lg"
       footer={
         <>
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
           <Button type="submit" form="cred-form" variant="primary">
-            {editCredential ? 'Save Changes' : 'Create'}
+            {editCredential ? "Save Changes" : "Create"}
           </Button>
         </>
       }
