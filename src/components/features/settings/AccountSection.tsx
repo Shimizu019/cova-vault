@@ -1,8 +1,9 @@
-﻿import { useEffect, useRef } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { User, Camera } from 'lucide-react';
 import { Input, Label } from '@components/ui/Input';
 import { useSettingsStore, useUIStore } from '@store';
 import { getInitials } from '@lib/utils';
+import { setMasterPassword } from '@lib/auth/authStorage';
 
 export function AccountSection() {
   const { user, updateUser } = useSettingsStore();
@@ -12,6 +13,13 @@ export function AccountSection() {
   const nameRef = useRef(user.name);
   const displayNameRef = useRef(user.displayName);
   const emailRef = useRef(user.email);
+
+  // Master-password change form (separate from the auto-save above because
+  // it has validation, confirmation, and a click-to-save action).
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordErr, setPasswordErr] = useState<string | null>(null);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   // Sync to store on input change (with a short debounce)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -28,6 +36,37 @@ export function AccountSection() {
     displayNameRef.current = user.displayName;
     emailRef.current = user.email;
   }, [user.name, user.displayName, user.email]);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSavingPassword) return;
+    setPasswordErr(null);
+
+    if (!newPassword) {
+      setPasswordErr('New password is required');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordErr('Password must be at least 8 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordErr('Passwords do not match');
+      return;
+    }
+
+    setIsSavingPassword(true);
+    try {
+      await setMasterPassword(newPassword);
+      addToast('Master password updated', 'success');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch {
+      addToast('Could not update master password', 'error');
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
 
   return (
     <div id="account" className="card mb-4 overflow-hidden">
@@ -90,11 +129,51 @@ export function AccountSection() {
             <Input id="profile-email" type="email" defaultValue={user.email} onChange={(e) => { emailRef.current = e.target.value; queueSave({ email: e.target.value }); }} placeholder="email@example.com" />
           </div>
         </div>
-        <div>
-          <Label htmlFor="profile-password">New Password</Label>
-          <Input id="profile-password" type="password" placeholder="Leave blank to keep current" />
-        </div>
-        <p className="text-xs text-cova-textMuted italic">Changes are saved automatically.</p>
+        <form onSubmit={handleChangePassword} noValidate className="space-y-3" aria-label="Change master password">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="profile-password" required>New Password</Label>
+              <Input
+                id="profile-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => { setNewPassword(e.target.value); if (passwordErr) setPasswordErr(null); }}
+                placeholder="At least 8 characters"
+                error={passwordErr ?? undefined}
+                aria-invalid={!!passwordErr || undefined}
+                autoComplete="new-password"
+                disabled={isSavingPassword}
+              />
+            </div>
+            <div>
+              <Label htmlFor="profile-password-confirm" required>Confirm Password</Label>
+              <Input
+                id="profile-password-confirm"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => { setConfirmPassword(e.target.value); if (passwordErr) setPasswordErr(null); }}
+                placeholder="Re-enter new password"
+                error={passwordErr ?? undefined}
+                aria-invalid={!!passwordErr || undefined}
+                autoComplete="new-password"
+                disabled={isSavingPassword}
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="submit"
+              className="btn btn-primary text-sm"
+              disabled={isSavingPassword}
+              aria-busy={isSavingPassword || undefined}
+            >
+              {isSavingPassword ? 'Saving…' : 'Update master password'}
+            </button>
+            <p className="text-xs text-cova-textMuted">
+              Use a long, unique passphrase. There is no email-based recovery for a local vault.
+            </p>
+          </div>
+        </form>
       </div>
     </div>
   );

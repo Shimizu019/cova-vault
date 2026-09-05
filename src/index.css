@@ -432,4 +432,89 @@
   @keyframes covaBlink {
     to { opacity: 0; }
   }
+
+  /* Monospaced font for terminal / system-status text. The Lock screen
+     uses this for [ SYSTEM_STATUS: LOCKED ], crypto specs, and the
+     shell prompt. */
+  .cova-mono,
+  .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-feature-settings: 'liga' 0, 'calt' 0; /* monospaced purity */
+  }
+
+  /* Blue → violet gradient (used only on the Lock screen's wordmark and
+     primary CTA, per the brutalist / military-grade spec). */
+  .cova-gradient-text {
+    background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+    -webkit-background-clip: text;
+            background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+  .cova-gradient-bg {
+    background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+  }
+
+  /* Subtle scanline + noise overlay for the Lock screen. Two layered
+     radial-gradients to create a deep, "monitor-on" charcoal look without
+     introducing a new image asset. */
+  .cova-vault-bg {
+    background-color: #07080A;
+    background-image:
+      radial-gradient(ellipse at 50% 0%, rgba(59, 130, 246, 0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 50% 100%, rgba(139, 92, 246, 0.05) 0%, transparent 60%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.015) 0%, transparent 50%);
+  }
+
+  /* Anti-tamper "frame" border that gives the card a brutalist, vault-
+     door feel. Uses a thin gradient that meets the spec's monochromatic
+     constraint. */
+  .cova-vault-frame {
+    position: relative;
+    background-color: #0B0C10;
+    border: 1px solid #1F2232;
+  }
+  .cova-vault-frame::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 40%, rgba(255, 255, 255, 0) 60%, rgba(255, 255, 255, 0.04) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Corner brackets in the four corners of the vault frame, like a
+     targeting reticle. Brutalist + cryptographic vibe. */
+  .cova-corner-brackets::before,
+  .cova-corner-brackets::after,
+  .cova-cb-bl,
+  .cova-cb-br {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-color: rgba(255, 255, 255, 0.35);
+    pointer-events: none;
+  }
+  .cova-corner-brackets::before {
+    top: -1px; left: -1px;
+    border-top: 1px solid; border-left: 1px solid;
+  }
+  .cova-corner-brackets::after {
+    top: -1px; right: -1px;
+    border-top: 1px solid; border-right: 1px solid;
+  }
+  .cova-cb-bl {
+    bottom: -1px; left: -1px;
+    border-bottom: 1px solid; border-left: 1px solid;
+  }
+  .cova-cb-br {
+    bottom: -1px; right: -1px;
+    border-bottom: 1px solid; border-right: 1px solid;
+  }
 }
