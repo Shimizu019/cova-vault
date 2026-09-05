@@ -284,7 +284,7 @@ export function Lock() {
           <p className="text-[11px] sm:text-[12px] cova-mono text-cova-textMuted">
             <span className="text-cova-text font-semibold">[ SYSTEM_STATUS: LOCKED ]</span>
             <span className="mx-2 text-white/20">│</span>
-            <span className="tracking-[0.05em]">AES-256 · Argon2id · Local-first</span>
+            <span className="tracking-[0.05em]">AES-256 · Local-only · No cloud sync</span>
             <span aria-hidden="true" className="cova-cursor text-cova-text" />
           </p>
           <p className="mt-1.5 text-[10px] sm:text-[11px] cova-mono uppercase tracking-[0.18em] text-cova-textMuted/70">
