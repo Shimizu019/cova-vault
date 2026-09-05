@@ -3,6 +3,7 @@ import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { useUIStore } from '@store';
 import { useNavigate } from 'react-router-dom';
 import { isFirstTime, verify, clearMasterPassword } from '@lib/auth/authStorage';
+import CovaLogo from '@/assets/image/CovaLogo.png';
 
 const PASSWORD_INPUT_ID = 'cova-lock-password';
 const PASSWORD_ERROR_ID = 'cova-lock-password-error';
@@ -22,11 +23,33 @@ export function Lock() {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Track the first-time state in a stable variable so the effect below
+  // can depend on it without calling isFirstTime() inline (linter rule).
+  const firstTime = isFirstTime();
+
   // Show the CHANGEME hint only before the user has set a real master password.
-  const [showChangemeHint, setShowChangemeHint] = useState<boolean>(() => isFirstTime());
+  const [showChangemeHint, setShowChangemeHint] = useState<boolean>(firstTime);
+
+  // Self-heal: if a previous build left the legacy `cova:changeme-used`
+  // flag stuck in localStorage (which would otherwise block CHANGEME
+  // after a "Forgot password?" reset), clear it now so the user is
+  // not locked out forever. Runs once on mount, before any render that
+  // depends on the flag's absence.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot self-heal
   useEffect(() => {
-    setShowChangemeHint(isFirstTime());
+    try {
+      localStorage.removeItem('cova:changeme-used');
+    } catch {
+      /* storage unavailable; ignore */
+    }
   }, []);
+
+  // Keep hint in sync with the actual first-time state (e.g. after
+  // the user sets a new password in Settings and returns here, or after
+  // a "Forgot Password?" reset that happened in another tab).
+  useEffect(() => {
+    setShowChangemeHint(firstTime);
+  }, [firstTime]);
 
   // The error that should be displayed below the input (if any).
   // Validation errors take priority over authentication errors so the
@@ -52,8 +75,13 @@ export function Lock() {
     e.preventDefault();
     if (isSubmitting) return; // guard against rapid double-submits
 
+    // Trim whitespace so accidental leading/trailing spaces from copy-paste
+    // or autofill don't silently fail the comparison. We do NOT lowercase
+    // — passwords are case-sensitive by design.
+    const submitted = password.trim();
+
     // 1. Validate (spec rule 11). Never submit empty input.
-    if (!password) {
+    if (!submitted) {
       setPasswordError('Password is required');
       setAuthError(null);
       return;
@@ -67,7 +95,7 @@ export function Lock() {
     const start = Date.now();
     let ok = false;
     try {
-      ok = await verify(password);
+      ok = await verify(submitted);
     } catch {
       // We never want to leak the underlying error to the user.
       ok = false;
@@ -93,7 +121,7 @@ export function Lock() {
     // 4. First-time path: CHANGEME is correct → send the user to Settings
     //    to set a real master password. After that, this branch is
     //    unreachable because the stored hash no longer matches CHANGEME.
-    if (showChangemeHint && password === 'CHANGEME') {
+    if (showChangemeHint && submitted === 'CHANGEME') {
       addToast('First-time access — please set a new password', 'info');
       navigate('/settings#security');
       return;
@@ -107,12 +135,31 @@ export function Lock() {
   const handleForgotPassword = () => {
     // Local-only vault: there is no email-based reset. Clearing the
     // stored hash forces the app back into the first-time CHANGEME flow.
+    //
+    // This is a destructive-but-recoverable action (your stored credentials,
+    // notes, etc. are NOT deleted — only the master-password hash is wiped),
+    // so we ask for explicit confirmation to prevent an accidental click.
+    // We use the native confirm() to stay consistent with the rest of the
+    // codebase (see Credentials / Notes / Folders destructive actions).
+    const ok = window.confirm(
+      'Reset master password?\n\n' +
+        'Your stored data (credentials, notes, wallet, etc.) will remain ' +
+        'intact — only the master password is cleared.\n\n' +
+        'After reset, sign in with the temporary password "CHANGEME" and ' +
+        'choose a new master password in Settings.\n\n' +
+        'Continue?'
+    );
+    if (!ok) return;
+
     clearMasterPassword();
     setShowChangemeHint(true);
     setAuthError(null);
     setPasswordError(null);
     setPassword('');
-    addToast('Master password cleared. Use CHANGEME to set a new one.', 'info');
+    addToast(
+      'Master password cleared. Use CHANGEME to sign in, then set a new one in Settings.',
+      'info'
+    );
   };
 
   return (
@@ -120,18 +167,15 @@ export function Lock() {
       {/* Centered vault card */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-md">
-          {/* Cryptographic logo motif + wordmark */}
+          {/* Wordmark logo — uses the same CovaLogo.png asset the sidebar
+              renders, so the brand mark is consistent across the app. */}
           <div className="text-center mb-6">
-            <div
-              className="inline-flex items-center justify-center mb-5"
-              role="img"
-              aria-label="Cova vault seal: fingerprint inside a cryptographic shield"
-            >
-              <CovaSeal />
-            </div>
-            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight cova-gradient-text">
-              Cova
-            </h1>
+            <img
+              src={CovaLogo}
+              alt="Cova"
+              className="inline-block h-12 sm:h-14 w-auto mb-5 select-none"
+              draggable={false}
+            />
             <p className="mt-2 text-[13px] sm:text-sm text-cova-textMuted max-w-sm mx-auto leading-relaxed">
               Coded for privacy. Your credentials remain encrypted, local, and fully under your control.
             </p>
@@ -293,74 +337,5 @@ export function Lock() {
         </div>
       </footer>
     </div>
-  );
-}
-
-/**
- * Cryptographic logo motif: a shield silhouette with a stylized fingerprint
- * inside, plus a small key icon at the bottom. Inline SVG so we don't ship a
- * raster asset. The fingerprint "ridges" are concentric arcs that read as
- * biometric data at a glance, and the shield outline evokes a vault door.
- *
- * Sized at 64px and uses currentColor so it inherits the page text color
- * when not inside the gradient wordmark. The outer ring is intentionally
- * thin and monochromatic to fit the brutalist spec.
- */
-function CovaSeal() {
-  return (
-    <svg
-      width="64"
-      height="72"
-      viewBox="0 0 64 72"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-      className="text-cova-text"
-    >
-      {/* Shield outline */}
-      <path
-        d="M32 2 L60 12 V36 C60 52 48 64 32 70 C16 64 4 52 4 36 V12 Z"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinejoin="round"
-        fill="none"
-        opacity="0.85"
-      />
-      {/* Inner shield */}
-      <path
-        d="M32 8 L54 16 V36 C54 49 44 59 32 64 C20 59 10 49 10 36 V16 Z"
-        stroke="currentColor"
-        strokeWidth="0.75"
-        strokeLinejoin="round"
-        fill="none"
-        opacity="0.4"
-      />
-      {/* Fingerprint arcs (centered around (32, 32)) */}
-      <g stroke="currentColor" strokeWidth="1.1" fill="none" strokeLinecap="round" opacity="0.95">
-        <path d="M22 30 C22 24 26 20 32 20 C38 20 42 24 42 30" />
-        <path d="M19 33 C19 25 24 17 32 17 C40 17 45 25 45 33" />
-        <path d="M24 33 C24 27 27 24 32 24 C37 24 40 27 40 33" />
-        <path d="M27 33 C27 30 29 28 32 28 C35 28 37 30 37 33" />
-        <path d="M22 36 C22 30 25 28 30 28" />
-        <path d="M42 36 C42 30 39 28 34 28" />
-        <path d="M32 36 V44" />
-        <path d="M28 38 V42" />
-        <path d="M36 38 V42" />
-      </g>
-      {/* Key icon at the base of the shield */}
-      <g stroke="currentColor" strokeWidth="1.1" fill="none" strokeLinecap="round" opacity="0.85">
-        <circle cx="32" cy="50" r="2.5" />
-        <path d="M34.5 50 L42 50" />
-        <path d="M40 50 V52.5" />
-        <path d="M42 50 V53.5" />
-      </g>
-      {/* Corner ticks (anti-tamper reticle) */}
-      <g stroke="currentColor" strokeWidth="1" opacity="0.5">
-        <path d="M4 12 H1 M4 12 V9" />
-        <path d="M60 12 H63 M60 12 V9" />
-        <path d="M4 60 H1 M4 60 V63" />
-        <path d="M60 60 H63 M60 60 V63" />
-      </g>
-    </svg>
   );
 }

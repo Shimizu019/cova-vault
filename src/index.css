@@ -442,15 +442,9 @@
     font-feature-settings: 'liga' 0, 'calt' 0; /* monospaced purity */
   }
 
-  /* Blue → violet gradient (used only on the Lock screen's wordmark and
-     primary CTA, per the brutalist / military-grade spec). */
-  .cova-gradient-text {
-    background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
-    -webkit-background-clip: text;
-            background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
-  }
+  /* Blue → violet gradient (used only on the Lock screen's primary CTA
+     — the "Unlock Vault" / "Continue" button. The wordmark logo is its
+     own inline SVG with an internal gradient, so it doesn't need this). */
   .cova-gradient-bg {
     background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
   }

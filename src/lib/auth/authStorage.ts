@@ -11,10 +11,6 @@
 
 const STORAGE_KEY = 'cova:master-password-hash';
 const LEGACY_FIRST_RUN_KEY = 'cova:master-password-initialized';
-// Permanent flag: set to '1' the first time CHANGEME is successfully used.
-// Unlike the other keys, this is NEVER cleared — not even by clearMasterPassword().
-// Once CHANGEME has been used once on this device, it can never be used again.
-const CHANGEME_USED_KEY = 'cova:changeme-used';
 
 async function sha256(input: string): Promise<string> {
   const data = new TextEncoder().encode(input);
@@ -40,34 +36,28 @@ const FIRST_TIME_PASSWORD = 'CHANGEME';
 
 /** Verify a candidate password against the stored master.
  *  Resolves to `true` if it matches, `false` otherwise.
- *  On first run, `CHANGEME` is accepted once - permanently. */
+ *
+ *  Rules:
+ *    1. On first run (no stored hash), `CHANGEME` is accepted.
+ *    2. If the user explicitly chose `CHANGEME` as their real password
+ *       in Settings (the stored hash equals sha256('CHANGEME')), that
+ *       is their legitimate password and is accepted.
+ *    3. Otherwise, the candidate is hashed and compared against the
+ *       stored hash. */
 export async function verify(candidate: string): Promise<boolean> {
   if (!candidate) return false;
-  if (isFirstTime()) {
-    // CHANGEME_USED_KEY is a permanent flag that survives clearMasterPassword().
-    // Once CHANGEME has been used once on this device it can never re-open
-    // the vault after a password reset.  BUT: if the user explicitly set
-    // their password to CHANGEME in Settings, the stored hash matches the
-    // CHANGEME digest - in that case it's their legitimate chosen password,
-    // not the default placeholder, so we let it through.
-    if (candidate === FIRST_TIME_PASSWORD) {
-      if (localStorage.getItem(CHANGEME_USED_KEY)) {
-        const storedHash = localStorage.getItem(STORAGE_KEY);
-        if (storedHash) {
-          const changemeHash = await sha256(FIRST_TIME_PASSWORD);
-          if (storedHash === changemeHash) return true; // chosen password
-        }
-        return false;
-      }
-      localStorage.setItem(CHANGEME_USED_KEY, '1');
-      return true;
-    }
-    return false;
-  }
+
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) return false;
+
+  // No stored hash → first run. CHANGEME is the only accepted value.
+  if (!stored) {
+    return candidate === FIRST_TIME_PASSWORD;
+  }
+
+  // Stored hash present. Compare against it. If the user happens to have
+  // chosen CHANGEME as their real password, the stored hash is exactly
+  // sha256('CHANGEME'), so the same hash comparison will succeed.
   const candidateHash = await sha256(candidate);
-  // Length + constant-ish compare. For a local vault this is honest.
   if (candidateHash.length !== stored.length) return false;
   let diff = 0;
   for (let i = 0; i < candidateHash.length; i++) {
@@ -84,7 +74,9 @@ export async function setMasterPassword(newPassword: string): Promise<void> {
   localStorage.setItem(LEGACY_FIRST_RUN_KEY, '1');
 }
 
-/** Forget the master password. Used by the "Forgot password?" flow. */
+/** Forget the master password. Used by the "Forgot password?" flow.
+ *  After clearing, the next unlock must use `CHANGEME` (first-run
+ *  state is restored). */
 export function clearMasterPassword(): void {
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(LEGACY_FIRST_RUN_KEY);
