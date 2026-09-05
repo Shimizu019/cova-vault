@@ -44,10 +44,21 @@ const FIRST_TIME_PASSWORD = 'CHANGEME';
 export async function verify(candidate: string): Promise<boolean> {
   if (!candidate) return false;
   if (isFirstTime()) {
-    // CHANGEME is only accepted if it has never been used on this device.
-    // CHANGEME_USED_KEY is a permanent flag - NOT cleared by clearMasterPassword().
+    // CHANGEME_USED_KEY is a permanent flag that survives clearMasterPassword().
+    // Once CHANGEME has been used once on this device it can never re-open
+    // the vault after a password reset.  BUT: if the user explicitly set
+    // their password to CHANGEME in Settings, the stored hash matches the
+    // CHANGEME digest - in that case it's their legitimate chosen password,
+    // not the default placeholder, so we let it through.
     if (candidate === FIRST_TIME_PASSWORD) {
-      if (localStorage.getItem(CHANGEME_USED_KEY)) { return false; }
+      if (localStorage.getItem(CHANGEME_USED_KEY)) {
+        const storedHash = localStorage.getItem(STORAGE_KEY);
+        if (storedHash) {
+          const changemeHash = await sha256(FIRST_TIME_PASSWORD);
+          if (storedHash === changemeHash) return true; // chosen password
+        }
+        return false;
+      }
       localStorage.setItem(CHANGEME_USED_KEY, '1');
       return true;
     }
