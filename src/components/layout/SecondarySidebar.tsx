@@ -1,12 +1,18 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@lib/utils';
-import { User } from 'lucide-react';
+import { User, Palette, Globe, Shield, Database } from 'lucide-react';
+
+interface SettingsItem {
+  id: string;
+  label: string;
+  href: string;
+}
 
 interface SettingsSection {
   id: string;
   title: string;
   icon: React.ComponentType<{ className?: string }>;
-  items: { id: string; label: string; href: string }[];
+  items: SettingsItem[];
 }
 
 const sections: SettingsSection[] = [
@@ -16,11 +22,32 @@ const sections: SettingsSection[] = [
     icon: User,
     items: [
       { id: 'account', label: 'Account', href: '/settings#account' },
+      { id: 'appearance', label: 'Appearance', href: '/settings#appearance' },
+      { id: 'language', label: 'Language', href: '/settings#language' },
+    ],
+  },
+  {
+    id: 'security',
+    title: 'Security',
+    icon: Shield,
+    items: [
+      { id: 'security', label: 'Security & 2FA', href: '/settings#security' },
+    ],
+  },
+  {
+    id: 'data',
+    title: 'Data',
+    icon: Database,
+    items: [
+      { id: 'data', label: 'Backup & Export', href: '/settings#data' },
     ],
   },
 ];
 
 export function SecondarySidebar() {
+  const location = useLocation();
+  const activeHash = location.hash.replace('#', '') || 'account';
+
   return (
     <nav
       className="hidden md:block w-56 flex-shrink-0 bg-cova-surface border-r border-cova-border h-full overflow-y-auto scrollbar-thin py-4"
@@ -37,20 +64,21 @@ export function SecondarySidebar() {
               </h3>
             </div>
             <div className="space-y-0.5 px-2">
-              {section.items.map((item) => (
-                <NavLink
-                  key={item.id}
-                  to={item.href}
-                  className={({ isActive }) =>
-                    cn(
+              {section.items.map((item) => {
+                const isActive = activeHash === item.id;
+                return (
+                  <NavLink
+                    key={item.id}
+                    to={item.href}
+                    className={cn(
                       'sidebar-item text-xs',
                       isActive && 'sidebar-item-active bg-cova-primary/10 text-cova-primary font-medium'
-                    )
-                  }
-                >
-                  {item.label}
-                </NavLink>
-              ))}
+                    )}
+                  >
+                    {item.label}
+                  </NavLink>
+                );
+              })}
             </div>
           </div>
         );

@@ -1,19 +1,34 @@
-import { useEffect, useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useUIStore } from '@store';
 import { PrimarySidebar } from './PrimarySidebar';
 import { SecondarySidebar } from './SecondarySidebar';
-import { Menu, Search, ChevronDown, X } from 'lucide-react';
+import { Menu, Search, ChevronDown, X, User, Settings as SettingsIcon, LogOut } from 'lucide-react';
 import { cn } from '@lib/utils';
 import { Avatar } from '@components/ui/Badge';
 import { useSettingsStore } from '@store';
 
 export function AppShell() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { sidebarCollapsed, toggleSidebar, toasts, removeToast, searchQuery, setSearchQuery } = useUIStore();
-  const { user } = useSettingsStore();
+  const { user, updateUser } = useSettingsStore();
   const [settingsNavOpen, setSettingsNavOpen] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close user dropdown on outside click
+  useEffect(() => {
+    if (!userDropdownOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [userDropdownOpen]);
 
   // Auto-collapse sidebar when on settings route (per spec)
   const shouldCollapse = sidebarCollapsed || location.pathname.startsWith('/settings');
@@ -112,21 +127,79 @@ export function AppShell() {
           <div className="flex-1" />
 
           {/* User */}
-          <div className="flex items-center gap-2 sm:gap-2.5 px-1.5 sm:px-2 py-1.5 rounded-lg hover:bg-cova-surfaceHover transition-colors cursor-pointer">
-            {user.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt="User avatar"
-                className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-              />
-            ) : (
-              <Avatar initial={user.avatarInitial} />
+          <div className="relative" ref={userDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setUserDropdownOpen((open) => !open)}
+              className="flex items-center gap-2 sm:gap-2.5 px-1.5 sm:px-2 py-1.5 rounded-lg hover:bg-cova-surfaceHover transition-colors cursor-pointer"
+              aria-haspopup="menu"
+              aria-expanded={userDropdownOpen}
+              aria-label="Open user menu"
+            >
+              {user.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt="User avatar"
+                  className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                />
+              ) : (
+                <Avatar initial={user.avatarInitial} />
+              )}
+              <div className="hidden md:flex flex-col text-left">
+                <span className="text-sm font-medium text-cova-text leading-tight">{user.displayName}</span>
+                <span className="text-xs text-cova-textMuted leading-tight">{user.email}</span>
+              </div>
+              <ChevronDown className={cn('w-4 h-4 text-cova-textMuted hidden md:block transition-transform duration-fast', userDropdownOpen && 'rotate-180')} />
+            </button>
+
+            {userDropdownOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full mt-2 min-w-[200px] bg-cova-modal rounded-xl border border-cova-border py-1 z-50 shadow-lg animate-scale-in"
+              >
+                <div className="px-3 py-2 border-b border-cova-border md:hidden">
+                  <p className="text-sm font-medium text-cova-text truncate">{user.displayName}</p>
+                  <p className="text-xs text-cova-textMuted truncate">{user.email}</p>
+                </div>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-cova-textSecondary hover:bg-cova-surfaceHover hover:text-cova-text transition-colors duration-fast w-full text-left"
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    navigate('/settings#account');
+                  }}
+                >
+                  <User className="w-4 h-4" />
+                  <span>Profile</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-cova-textSecondary hover:bg-cova-surfaceHover hover:text-cova-text transition-colors duration-fast w-full text-left"
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    navigate('/settings');
+                  }}
+                >
+                  <SettingsIcon className="w-4 h-4" />
+                  <span>Settings</span>
+                </button>
+                <div className="my-1 border-t border-cova-border" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-cova-danger hover:bg-cova-dangerLight transition-colors duration-fast w-full text-left"
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    navigate('/lock');
+                  }}
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
             )}
-            <div className="hidden md:flex flex-col text-left">
-              <span className="text-sm font-medium text-cova-text leading-tight">{user.displayName}</span>
-              <span className="text-xs text-cova-textMuted leading-tight">{user.email}</span>
-            </div>
-            <ChevronDown className="w-4 h-4 text-cova-textMuted hidden md:block" />
           </div>
         </header>
 

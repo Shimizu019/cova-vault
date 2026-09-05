@@ -13,10 +13,12 @@ import { Schedule } from '@pages/Schedule';
 import { Activity } from '@pages/Activity';
 import { Wallet } from '@pages/Wallet';
 import { Savings } from '@pages/Savings';
+import { Lock } from '@pages/Lock';
 
 export function AppRoutes() {
   return (
     <Routes>
+      <Route path="/lock" element={<Lock />} />
       <Route element={<AppShell />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/credentials" element={<Credentials />} />
@@ -31,9 +33,8 @@ export function AppRoutes() {
         <Route path="/generator" element={<Generator />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/activity" element={<Activity />} />
-        <Route path="/lock" element={<div className="flex items-center justify-center h-full"><p className="text-cova-text">Vault Locked — Lock functionality coming soon</p></div>} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/lock" replace />} />
+        <Route path="*" element={<Navigate to="/lock" replace />} />
       </Route>
     </Routes>
   );

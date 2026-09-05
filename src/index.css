@@ -56,6 +56,21 @@
 
   /* Accent color hex background (used by appearance picker) */
   .bg-cova-accent-current { background-color: var(--cova-accent, var(--cova-primary)); }
+
+  /* Hide the browser's native password-reveal eye toggle (Chromium/Blink). */
+  input[type="password"]::-webkit-credentials-auto-fill-button,
+  input[type="password"]::-webkit-caps-lock-indicator {
+    display: none !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Mask text using a glyph while keeping the input as type="text" so the
+     browser cannot inject its native password-reveal eye button. */
+  .cova-mask {
+    -webkit-text-security: disc;
+    text-security: disc;
+  }
 }
 
 @layer base {
@@ -402,5 +417,19 @@
 
   .text-gradient {
     @apply bg-gradient-to-r from-cova-primary to-purple-400 bg-clip-text text-transparent;
+  }
+
+  /* Terminal-style blinking caret (used by the Lock footer). */
+  .cova-cursor::after {
+    content: '_';
+    display: inline-block;
+    margin-left: 0.15em;
+    font-weight: 700;
+    color: var(--cova-primary);
+    animation: covaBlink 1s steps(2, start) infinite;
+  }
+
+  @keyframes covaBlink {
+    to { opacity: 0; }
   }
 }
