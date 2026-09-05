@@ -11,6 +11,10 @@
 
 const STORAGE_KEY = 'cova:master-password-hash';
 const LEGACY_FIRST_RUN_KEY = 'cova:master-password-initialized';
+// Permanent flag: set to '1' the first time CHANGEME is successfully used.
+// Unlike the other keys, this is NEVER cleared — not even by clearMasterPassword().
+// Once CHANGEME has been used once on this device, it can never be used again.
+const CHANGEME_USED_KEY = 'cova:changeme-used';
 
 async function sha256(input: string): Promise<string> {
   const data = new TextEncoder().encode(input);
@@ -36,11 +40,18 @@ const FIRST_TIME_PASSWORD = 'CHANGEME';
 
 /** Verify a candidate password against the stored master.
  *  Resolves to `true` if it matches, `false` otherwise.
- *  On first run, `CHANGEME` is accepted. */
+ *  On first run, `CHANGEME` is accepted once - permanently. */
 export async function verify(candidate: string): Promise<boolean> {
   if (!candidate) return false;
   if (isFirstTime()) {
-    return candidate === FIRST_TIME_PASSWORD;
+    // CHANGEME is only accepted if it has never been used on this device.
+    // CHANGEME_USED_KEY is a permanent flag - NOT cleared by clearMasterPassword().
+    if (candidate === FIRST_TIME_PASSWORD) {
+      if (localStorage.getItem(CHANGEME_USED_KEY)) { return false; }
+      localStorage.setItem(CHANGEME_USED_KEY, '1');
+      return true;
+    }
+    return false;
   }
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) return false;
