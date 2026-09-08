@@ -1,9 +1,8 @@
 ﻿import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import { Button } from '@components/ui/Button';
-import { EmptyState } from '@components/ui/Card';
 import { useTaskStore } from '@store';
-import { formatDate } from '@lib/utils';
+import { toLocalDateString } from '@lib/utils';
 
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -69,7 +68,7 @@ export function Calendar() {
           {DAYS.map((d) => <div key={d} className="px-1 sm:px-2 py-2 sm:py-3 text-center text-[10px] sm:text-xs font-semibold text-cova-textMuted uppercase border-b border-cova-border">{d}</div>)}
           {calDays.map((day, i) => {
             if (!day) return <div key={'e'+i} className="min-h-[64px] sm:min-h-[96px] border-b border-r border-cova-border/50" />;
-            const key = day.toISOString().split('T')[0];
+            const key = toLocalDateString(day);
             const dayTasks = tasksByDate[key] || [];
             return (
               <div key={key} className={`min-h-[64px] sm:min-h-[96px] border-b border-r border-cova-border/50 p-1 sm:p-1.5 ${isToday(day) ? 'bg-cova-primary/5' : ''}`}>

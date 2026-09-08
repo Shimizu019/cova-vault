@@ -2,7 +2,7 @@
 import { Clock, ChevronLeft, ChevronRight, CheckSquare } from 'lucide-react';
 import { EmptyState } from '@components/ui/Card';
 import { useTaskStore } from '@store';
-import { formatDate } from '@lib/utils';
+import { formatDate, toLocalDateString } from '@lib/utils';
 
 const HOURS = Array.from({ length: 15 }, (_, i) => i + 6); // 6am to 8pm
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -74,7 +74,7 @@ export function Schedule() {
                 {h > 12 ? h - 12 + 'pm' : h === 12 ? '12pm' : h + 'am'}
               </div>
               {days.map((d) => {
-                const key = d.toISOString().split('T')[0];
+                const key = toLocalDateString(d);
                 const dayTasks = (tasksByDayHour[key] || []).slice(0, 2);
                 return (
                   <div key={h + '-' + key} className="min-h-[52px] border-b border-r border-cova-border/50 p-1">
