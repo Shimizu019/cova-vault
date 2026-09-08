@@ -1,4 +1,4 @@
-# <img src="src/assets/image/CovaLogo.png" alt="Cova Vault" height="64" />
+# <div align="center"><img src="src/assets/image/CovaLogo.png" alt="Cova Vault" height="80" /></div>
 
 ![Status](https://img.shields.io/badge/status-active-success)
 ![Stack](https://img.shields.io/badge/stack-React%2019%20%7C%20Vite%208%20%7C%20TypeScript-blue)
