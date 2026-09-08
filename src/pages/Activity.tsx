@@ -1,17 +1,17 @@
 ﻿import { useMemo } from 'react';
-import { Activity as ActivityIcon, Key, FileText, CheckSquare, Wallet as WalletIcon } from 'lucide-react';
+import { Activity as ActivityIcon, Key, FileText, CheckSquare, Wallet as WalletIcon, PiggyBank } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { EmptyState } from '@components/ui/Card';
-import { useCredentialStore } from '@store';
+import { useActivityStore } from '@store';
 import { formatDateTime } from '@lib/utils';
 import type { ItemStatus } from '@lib/types';
 
-const TYPE_ICONS: Record<ItemStatus, LucideIcon> = { credentials: Key, notes: FileText, tasks: CheckSquare, wallet: WalletIcon };
-const TYPE_COLORS: Record<ItemStatus, string> = { credentials: '#EF4444', notes: '#22C55E', tasks: '#F97316', wallet: '#22C55E' };
-const TYPE_LABELS: Record<ItemStatus, string> = { credentials: 'Credential', notes: 'Note', tasks: 'Task', wallet: 'Wallet' };
+const TYPE_ICONS: Record<ItemStatus, LucideIcon> = { credentials: Key, notes: FileText, tasks: CheckSquare, wallet: WalletIcon, savings: PiggyBank };
+const TYPE_COLORS: Record<ItemStatus, string> = { credentials: '#EF4444', notes: '#22C55E', tasks: '#F97316', wallet: '#22C55E', savings: '#7C3AED' };
+const TYPE_LABELS: Record<ItemStatus, string> = { credentials: 'Credential', notes: 'Note', tasks: 'Task', wallet: 'Wallet', savings: 'Savings' };
 
 export function Activity() {
-  const { activities } = useCredentialStore();
+  const { activities } = useActivityStore();
 
   const sorted = useMemo(() => [...activities].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()), [activities]);
 

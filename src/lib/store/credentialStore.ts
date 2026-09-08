@@ -1,12 +1,12 @@
 import { create } from "zustand";
-import type { Credential, ActivityItem, Folder } from "../types";
+import type { Credential, Folder } from "../types";
 import { generateId } from "../utils";
 import { persist } from "zustand/middleware";
+import { useActivityStore } from "./activityStore";
 
 interface CredentialState {
   credentials: Credential[];
   folders: Folder[];
-  activities: ActivityItem[];
 
   addCredential: (cred: Omit<Credential, "id" | "createdAt" | "updatedAt">) => Credential;
   updateCredential: (id: string, updates: Partial<Credential>) => void;
@@ -24,9 +24,6 @@ interface CredentialState {
   getFolderCount: (id: string) => number;
   getFavoriteCredentials: () => Credential[];
   getAllTags: () => string[];
-
-  addActivity: (activity: Omit<ActivityItem, "id" | "timestamp">) => void;
-  clearActivities: () => void;
 }
 
 export const useCredentialStore = create<CredentialState>()(
@@ -34,13 +31,12 @@ export const useCredentialStore = create<CredentialState>()(
     (set, get) => ({
       credentials: [],
       folders: [],
-      activities: [],
 
       addCredential: (cred) => {
         const now = new Date().toISOString();
         const newCred: Credential = { ...cred, id: generateId(), createdAt: now, updatedAt: now };
         set((s) => ({ credentials: [newCred, ...s.credentials] }));
-        get().addActivity({ type: "credentials", title: "Created credential", detail: cred.name });
+        useActivityStore.getState().addActivity({ type: "credentials", title: "Created credential", detail: cred.name });
         return newCred;
       },
 
@@ -51,13 +47,13 @@ export const useCredentialStore = create<CredentialState>()(
           ),
         }));
         const cred = get().credentials.find((c) => c.id === id);
-        if (cred) get().addActivity({ type: "credentials", title: "Updated credential", detail: cred.name });
+        if (cred) useActivityStore.getState().addActivity({ type: "credentials", title: "Updated credential", detail: cred.name });
       },
 
       deleteCredential: (id) => {
         const cred = get().credentials.find((c) => c.id === id);
         set((s) => ({ credentials: s.credentials.filter((c) => c.id !== id) }));
-        if (cred) get().addActivity({ type: "credentials", title: "Deleted credential", detail: cred.name });
+        if (cred) useActivityStore.getState().addActivity({ type: "credentials", title: "Deleted credential", detail: cred.name });
       },
 
       toggleFavorite: (id) => {
@@ -77,7 +73,7 @@ export const useCredentialStore = create<CredentialState>()(
         const cred = get().credentials.find((c) => c.id === id);
         const folder = folderId ? get().folders.find((f) => f.id === folderId) : null;
         if (cred) {
-          get().addActivity({
+          useActivityStore.getState().addActivity({
             type: "credentials",
             title: "Moved credential",
             detail: cred.name + " to " + (folder ? folder.name : "No Folder"),
@@ -88,7 +84,7 @@ export const useCredentialStore = create<CredentialState>()(
       addFolder: (name, type = "mixed") => {
         const newFolder: Folder = { id: generateId(), name, type, createdAt: new Date().toISOString() };
         set((s) => ({ folders: [...s.folders, newFolder] }));
-        get().addActivity({ type: "credentials", title: "Created folder", detail: name });
+        useActivityStore.getState().addActivity({ type: "credentials", title: "Created folder", detail: name });
         return newFolder;
       },
 
@@ -96,7 +92,7 @@ export const useCredentialStore = create<CredentialState>()(
         set((s) => ({
           folders: s.folders.map((f) => (f.id === id ? { ...f, name } : f)),
         }));
-        get().addActivity({ type: "credentials", title: "Renamed folder", detail: name });
+        useActivityStore.getState().addActivity({ type: "credentials", title: "Renamed folder", detail: name });
       },
 
       deleteFolder: (id) => {
@@ -107,7 +103,7 @@ export const useCredentialStore = create<CredentialState>()(
             c.folderId === id ? { ...c, folderId: undefined } : c
           ),
         }));
-        if (folder) get().addActivity({ type: "credentials", title: "Deleted folder", detail: folder.name });
+        if (folder) useActivityStore.getState().addActivity({ type: "credentials", title: "Deleted folder", detail: folder.name });
       },
 
       getCredentialById: (id) => get().credentials.find((c) => c.id === id),
@@ -117,21 +113,12 @@ export const useCredentialStore = create<CredentialState>()(
       getFolderCount: (id) => get().credentials.filter((c) => c.folderId === id).length,
       getFavoriteCredentials: () => get().credentials.filter((c) => c.favorite),
       getAllTags: () => [...new Set(get().credentials.flatMap((c) => c.tags))],
-
-      addActivity: (activity) => {
-        const newActivity: ActivityItem = { ...activity, id: generateId(), timestamp: new Date().toISOString() };
-        set((s) => ({ activities: [newActivity, ...s.activities].slice(0, 100) }));
-      },
-
-      clearActivities: () => set({ activities: [] }),
     }),
     {
       name: "cova-credential-store",
-      // Persist all state including folders
       partialize: (state) => ({
         credentials: state.credentials,
         folders: state.folders,
-        activities: state.activities,
       }),
     }
   )

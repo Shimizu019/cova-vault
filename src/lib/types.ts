@@ -30,7 +30,7 @@ export type Language =
   | 'ar';   // Arabic
 
 /** Status type for activities and items */
-export type ItemStatus = 'credentials' | 'notes' | 'tasks' | 'wallet';
+export type ItemStatus = 'credentials' | 'notes' | 'tasks' | 'wallet' | 'savings';
 
 // ============================================================================
 // Core entities
@@ -116,6 +116,15 @@ export interface ActivityItem {
   title: string;
   detail: string;
   timestamp: string;
+}
+
+/** Savings goal */
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  target: number;
+  current: number;
+  createdAt: string;
 }
 
 /** Folder for organization */

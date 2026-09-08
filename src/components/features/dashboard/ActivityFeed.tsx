@@ -20,6 +20,7 @@ const statusColors: Record<ItemStatus, string> = {
   notes: 'bg-cova-notes',
   tasks: 'bg-cova-tasks',
   wallet: 'bg-cova-notes',
+  savings: 'bg-cova-savings',
 };
 
 export function ActivityFeed({ title, activities, color = 'all' }: ActivityFeedProps) {

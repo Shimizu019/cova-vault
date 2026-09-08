@@ -26,6 +26,7 @@ export default {
           credentials: '#EF4444',   // red - credentials
           notes: '#22C55E',         // green - notes/wallet
           tasks: '#F97316',         // orange - tasks
+          savings: '#7C3AED',       // violet - savings
           danger: '#EF4444',
           dangerHover: '#DC2626',
           dangerLight: '#3F1212',

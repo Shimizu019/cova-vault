@@ -1,16 +1,17 @@
 import { Key, FileText, CheckSquare, Wallet } from 'lucide-react';
-import { useCredentialStore, useNoteStore, useTaskStore, useWalletStore, useSettingsStore } from '@store';
+import { useCredentialStore, useNoteStore, useTaskStore, useWalletStore, useSettingsStore, useActivityStore } from '@store';
 import { BackupBanner } from '@features/dashboard/BackupBanner';
 import { MetricCard } from '@features/dashboard/MetricCard';
 import { ActivityFeed } from '@features/dashboard/ActivityFeed';
 import { formatPHP } from '@lib/utils';
 
 export function Dashboard() {
-  const { credentials, activities } = useCredentialStore();
+  const { credentials } = useCredentialStore();
   const { notes } = useNoteStore();
   const { tasks, getOpenTasks } = useTaskStore();
   const { records, getBalance } = useWalletStore();
   const { user } = useSettingsStore();
+  const { activities } = useActivityStore();
 
   const openTasks = getOpenTasks();
   const balance = getBalance();

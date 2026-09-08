@@ -1,6 +1,6 @@
 import { Database, Download, Upload, Trash2 } from 'lucide-react';
 import { Button } from '@components/ui/Button';
-import { useCredentialStore, useSettingsStore, useNoteStore, useUIStore } from '@store';
+import { useCredentialStore, useSettingsStore, useNoteStore, useUIStore, useActivityStore } from '@store';
 
 export function DataSection() {
   const { credentials } = useCredentialStore();
@@ -40,7 +40,7 @@ export function DataSection() {
 
   const handleClearActivities = () => {
     if (confirm('Clear all activity logs? This cannot be undone.')) {
-      const { clearActivities } = useCredentialStore.getState();
+      const { clearActivities } = useActivityStore.getState();
       clearActivities();
       addToast('All activities cleared', 'info');
     }

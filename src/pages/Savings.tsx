@@ -5,16 +5,10 @@ import { Input, Label } from '@components/ui/Input';
 import { Modal } from '@components/ui/Modal';
 import { EmptyState } from '@components/ui/Card';
 import { useUIStore } from '@store';
+import { useSavingsStore } from '@store';
 import { formatPHP } from '@lib/utils';
 import { generateId } from '@lib/utils';
-
-interface SavingsGoal {
-  id: string;
-  name: string;
-  target: number;
-  current: number;
-  createdAt: string;
-}
+import type { SavingsGoal } from '@lib/types';
 
 const PRESETS = [
   { name: 'Emergency Fund', target: 50000 },
@@ -25,7 +19,7 @@ const PRESETS = [
 
 export function Savings() {
   const { addToast } = useUIStore();
-  const [goals, setGoals] = useState<SavingsGoal[]>([]);
+  const { goals, addGoal, updateGoal, removeGoal } = useSavingsStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState<SavingsGoal | null>(null);
   const [draftName, setDraftName] = useState('');
@@ -53,17 +47,17 @@ export function Savings() {
     const current = parseFloat(draftCurrent || '0');
     if (!draftName.trim() || isNaN(target) || target <= 0) { addToast('Fill in name and target amount', 'error'); return; }
     if (editing) {
-      setGoals((prev) => prev.map((g) => g.id === editing.id ? { ...g, name: draftName.trim(), target, current } : g));
+      updateGoal(editing.id, { name: draftName.trim(), target, current });
       addToast('Goal updated', 'success');
     } else {
-      setGoals((prev) => [...prev, { id: generateId(), name: draftName.trim(), target, current, createdAt: new Date().toISOString() }]);
+      addGoal({ id: generateId(), name: draftName.trim(), target, current, createdAt: new Date().toISOString() });
       addToast('Savings goal created', 'success');
     }
     setIsModalOpen(false);
   };
 
   const handleDelete = (g: SavingsGoal) => {
-    if (confirm(`Delete "${g.name}"?`)) { setGoals((prev) => prev.filter((x) => x.id !== g.id)); addToast('Goal deleted', 'info'); }
+    if (confirm(`Delete "${g.name}"?`)) { removeGoal(g.id); addToast('Goal deleted', 'info'); }
   };
 
   const totalSaved = goals.reduce((s, g) => s + g.current, 0);

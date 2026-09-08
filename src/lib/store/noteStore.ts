@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Note, ActivityItem } from "../types";
 import { generateId } from "../utils";
-import { useCredentialStore } from "./credentialStore";
+import { useActivityStore } from "./activityStore";
 
 interface NoteState {
   notes: Note[];
@@ -14,7 +14,7 @@ interface NoteState {
 
 const pushActivity = (activity: Omit<ActivityItem, "id" | "timestamp">) => {
   try {
-    useCredentialStore.getState().addActivity(activity);
+    useActivityStore.getState().addActivity(activity);
   } catch (e) {
     // silently fail if store is not yet initialized
   }

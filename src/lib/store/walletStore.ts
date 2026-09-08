@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { WalletRecord, Budget, ActivityItem } from "../types";
 import { generateId, formatPHP } from "../utils";
-import { useCredentialStore } from "./credentialStore";
+import { useActivityStore } from "./activityStore";
 
 export interface WalletState {
   records: WalletRecord[];
@@ -25,10 +25,10 @@ export interface WalletState {
   deleteBudget: (id: string) => void;
 }
 
-/** Helper to add a wallet activity to the credential store */
+/** Helper to add a wallet activity to the activity store */
 const pushActivity = (activity: Omit<ActivityItem, "id" | "timestamp">) => {
   try {
-    useCredentialStore.getState().addActivity(activity);
+    useActivityStore.getState().addActivity(activity);
   } catch (e) {
     // silently fail if store is not yet initialized
   }
