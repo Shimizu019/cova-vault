@@ -1,7 +1,7 @@
-# Covalogo
+# <img src="src/assets/image/CovaLogo.png" alt="Cova Vault" height="32" />
 
-> Your secure password manager and personal vault - a self-hosted, browser-based companion for managing
-> credentials, notes, tasks, finances, and more in one place.
+> Your secure personal vault - a self-hosted, browser-based companion for managing
+> credentials, notes, tasks, finances, savings goals, and more in one place.
 
 ![Status](https://img.shields.io/badge/status-active-success)
 ![Stack](https://img.shields.io/badge/stack-React%2019%20%7C%20Vite%208%20%7C%20TypeScript-blue)
@@ -11,7 +11,7 @@
 
 ## Overview
 
-**Covalogo** is a modular personal vault application built with React 19, TypeScript, and Vite. It bundles
+**Cova Vault** is a modular personal vault application built with React 19, TypeScript, and Vite. It bundles
 the tools most people need day-to-day - password storage, notes, tasks, finance tracking, savings goals,
 favorites, and an activity log - into a single, fast, and responsive interface.
 
@@ -68,7 +68,7 @@ choice and you have a fully self-hosted vault.
 
 ```
 cova-vault/
-+-- index.html                 # App entry HTML (title: "Covalogo")
++-- index.html                 # App entry HTML (title: "Cova Vault")
 +-- package.json
 +-- vite.config.ts
 +-- tailwind.config.js
@@ -78,8 +78,8 @@ cova-vault/
     +-- App.tsx                # Root component
     +-- index.css              # Global styles + tailwind layers
     +-- assets/image/          # Logos and static images
-    -   +-- CovalogoLogo.png
-    -   +-- CovalogoLock.png
+    -   +-- Cova VaultLogo.png
+    -   +-- Cova VaultLock.png
     +-- components/
     -   +-- layout/            # AppShell, PrimarySidebar, SecondarySidebar
     -   +-- ui/                # Reusable UI primitives (Button, Modal, Input, etc.)
