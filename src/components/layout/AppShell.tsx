@@ -18,6 +18,15 @@ export function AppShell() {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
+
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 767px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
   // Close user dropdown on outside click
   useEffect(() => {
     if (!userDropdownOpen) return;
@@ -93,13 +102,10 @@ export function AppShell() {
             onClick={() => {
               if (showSecondarySidebar) {
                 setSettingsNavOpen((open) => !open);
+              } else if (isMobile) {
+                setMobileNavOpen(true);
               } else {
-                // On mobile, open the drawer; on desktop, toggle collapse
-                if (window.innerWidth < 768) {
-                  setMobileNavOpen(true);
-                } else {
-                  toggleSidebar();
-                }
+                toggleSidebar();
               }
             }}
             className="p-2 rounded-lg text-cova-textSecondary hover:bg-cova-surfaceHover hover:text-cova-text transition-colors"

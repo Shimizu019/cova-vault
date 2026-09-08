@@ -2,12 +2,14 @@
 import { User, Camera } from 'lucide-react';
 import { Input, Label } from '@components/ui/Input';
 import { useSettingsStore, useUIStore } from '@store';
+import { useNavigate } from 'react-router-dom';
 import { getInitials } from '@lib/utils';
 import { setMasterPassword } from '@lib/auth/authStorage';
 
 export function AccountSection() {
   const { user, updateUser } = useSettingsStore();
   const { addToast } = useUIStore();
+  const navigate = useNavigate();
 
   // Local state for the inputs — auto-save to the store on every keystroke
   const nameRef = useRef(user.name);
@@ -58,9 +60,10 @@ export function AccountSection() {
     setIsSavingPassword(true);
     try {
       await setMasterPassword(newPassword);
-      addToast('Master password updated', 'success');
+      addToast('Master password updated. Please unlock with your new password.', 'success');
       setNewPassword('');
       setConfirmPassword('');
+      navigate('/lock');
     } catch {
       addToast('Could not update master password', 'error');
     } finally {

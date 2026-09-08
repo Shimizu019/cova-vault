@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { useUIStore } from '@store';
 import { useNavigate } from 'react-router-dom';
-import { isFirstTime, verify, clearMasterPassword } from '@lib/auth/authStorage';
+import { isFirstTime, verify, clearMasterPassword, onMasterPasswordChange } from '@lib/auth/authStorage';
 import CovaLogo from '@/assets/image/CovaLogo.png';
 
 const PASSWORD_INPUT_ID = 'cova-lock-password';
@@ -23,33 +23,18 @@ export function Lock() {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Track the first-time state in a stable variable so the effect below
-  // can depend on it without calling isFirstTime() inline (linter rule).
-  const firstTime = isFirstTime();
-
-  // Show the CHANGEME hint only before the user has set a real master password.
+  const [firstTime, setFirstTime] = useState(isFirstTime());
   const [showChangemeHint, setShowChangemeHint] = useState<boolean>(firstTime);
 
-  // Self-heal: if a previous build left the legacy `cova:changeme-used`
-  // flag stuck in localStorage (which would otherwise block CHANGEME
-  // after a "Forgot password?" reset), clear it now so the user is
-  // not locked out forever. Runs once on mount, before any render that
-  // depends on the flag's absence.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot self-heal
-  useEffect(() => {
-    try {
-      localStorage.removeItem('cova:changeme-used');
-    } catch {
-      /* storage unavailable; ignore */
-    }
-  }, []);
-
-  // Keep hint in sync with the actual first-time state (e.g. after
-  // the user sets a new password in Settings and returns here, or after
-  // a "Forgot Password?" reset that happened in another tab).
   useEffect(() => {
     setShowChangemeHint(firstTime);
   }, [firstTime]);
+
+  // React to password changes in other tabs/windows so the Lock screen
+  // updates immediately without requiring a manual refresh.
+  useEffect(() => {
+    return onMasterPasswordChange(setFirstTime);
+  }, []);
 
   // The error that should be displayed below the input (if any).
   // Validation errors take priority over authentication errors so the

@@ -82,4 +82,16 @@ export function clearMasterPassword(): void {
   localStorage.removeItem(LEGACY_FIRST_RUN_KEY);
 }
 
+/** Listen for changes to the master-password hash in other tabs/windows.
+ *  Returns an unsubscribe function. */
+export function onMasterPasswordChange(callback: (isFirstTimeNow: boolean) => void): () => void {
+  const handler = (e: StorageEvent) => {
+    if (e.key === STORAGE_KEY) {
+      callback(!e.newValue);
+    }
+  };
+  window.addEventListener('storage', handler);
+  return () => window.removeEventListener('storage', handler);
+}
+
 export const __test__ = { FIRST_TIME_PASSWORD, sha256 };
