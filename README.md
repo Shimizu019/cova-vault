@@ -54,9 +54,9 @@ choice and you have a fully self-hosted vault.
 | **Credentials** | Secure password storage with username, password, website, tags, favorite toggle, password strength meter, and password generator |
 | **PeraLog** | Personal finance tracker: income/expense records, monthly summary, category breakdown, budgets, and balance card |
 | **Savings** | Savings goals and progress tracking with persistence across navigation |
-| **Notes** | Quick notes with favorites and search |
-| **Tasks** | To-dos with status tracking and calendar/schedule integration |
-| **Folders** | Organize credentials into persistent, navigable folders |
+| **Notes** | Quick notes with favorites, search, and folder organization |
+| **Tasks** | To-dos with status tracking, calendar/schedule integration, and folders |
+| **Folders** | Organize credentials, notes, and tasks into persistent, navigable folders |
 | **Favorites** | Quick access to your starred credentials and items |
 | **Calendar & Schedule** | Date-based view of tasks and due items |
 | **Password Generator** | Strong random password generator |
@@ -165,8 +165,8 @@ Runs `oxlint` across the project.
 Each domain has its own Zustand store under `src/lib/store/`:
 
 - `useCredentialStore` — credentials, folders
-- `useNoteStore` — notes
-- `useTaskStore` — tasks
+- `useNoteStore` — notes, folders
+- `useTaskStore` — tasks, folders
 - `useWalletStore` — wallet records, budgets
 - `useSavingsStore` — savings goals
 - `useActivityStore` — centralized activity log
@@ -185,15 +185,13 @@ and Activity page consume this centralized list to render the recent activity wi
 
 ### Folder / Item Relationship
 
-`Credential.folderId` is the single foreign key into the `Folder` table. The `useCredentialStore`
-exposes:
+`Folder.folderId` links items to folders across Credentials, Notes, and Tasks. The stores expose:
 
-- `addFolder`, `renameFolder`, `deleteFolder`
-- `moveCredentialToFolder(id, folderId | undefined)`
-- `getCredentialsByFolder`, `getFolderCount`, `getFolderById`
+- `useCredentialStore`: `addFolder`, `renameFolder`, `deleteFolder`, `moveCredentialToFolder(id, folderId | undefined)`, `getCredentialsByFolder`, `getFolderCount`, `getFolderById`
+- `useNoteStore`: `addFolder`, `renameFolder`, `deleteFolder`, `moveNoteToFolder(id, folderId | undefined)`
+- `useTaskStore`: `addFolder`, `renameFolder`, `deleteFolder`, `moveTaskToFolder(id, folderId | undefined)`
 
-Deleting a folder moves all of its credentials to **No Folder** (`folderId` set to `undefined`);
-credentials are never destroyed as a side-effect of folder deletion.
+Folders can be module-specific (`type: 'credentials' | 'notes' | 'tasks'`) or `mixed`. Deleting a folder does not delete the items inside; instead, their `folderId` is set to `undefined` and they appear under **No Folder**.
 
 ### PeraLog (Wallet)
 

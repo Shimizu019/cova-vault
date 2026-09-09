@@ -6,11 +6,11 @@ import { Modal } from '@components/ui/Modal';
 import { Dropdown } from '@components/ui/Dropdown';
 import { EmptyState } from '@components/ui/Card';
 import { useNoteStore, useUIStore } from '@store';
-import type { Note } from '@lib/types';
+import type { Note, Folder } from '@lib/types';
 import { formatDate } from '@lib/utils';
 
 export function Notes() {
-  const { notes, addNote, updateNote, deleteNote, toggleFavorite } = useNoteStore();
+  const { notes, folders, addFolder, renameFolder, deleteFolder, moveNoteToFolder, addNote, updateNote, deleteNote, toggleFavorite } = useNoteStore();
   const { addToast } = useUIStore();
 
   const [search, setSearch] = useState('');
@@ -20,6 +20,10 @@ export function Notes() {
   const [viewing, setViewing] = useState<Note | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
+  const [draftFolderId, setDraftFolderId] = useState<string | undefined>(undefined);
+  const [folderModalOpen, setFolderModalOpen] = useState(false);
+  const [folderDraftName, setFolderDraftName] = useState('');
+  const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -34,6 +38,7 @@ export function Notes() {
     setEditing(null);
     setDraftTitle('');
     setDraftContent('');
+    setDraftFolderId(undefined);
     setIsModalOpen(true);
   };
 
@@ -41,6 +46,7 @@ export function Notes() {
     setEditing(n);
     setDraftTitle(n.title);
     setDraftContent(n.content);
+    setDraftFolderId(n.folderId);
     setIsModalOpen(true);
   };
 
@@ -50,13 +56,19 @@ export function Notes() {
       return;
     }
     if (editing) {
-      updateNote(editing.id, { title: draftTitle.trim(), content: draftContent });
+      updateNote(editing.id, { title: draftTitle.trim(), content: draftContent, folderId: draftFolderId });
       addToast('Note updated', 'success');
     } else {
-      addNote({ title: draftTitle.trim(), content: draftContent, favorite: false });
+      addNote({ title: draftTitle.trim(), content: draftContent, favorite: false, folderId: draftFolderId });
       addToast('Note created', 'success');
     }
     setIsModalOpen(false);
+  };
+
+  const handleMoveToFolder = (note: Note, folderId: string | undefined) => {
+    moveNoteToFolder(note.id, folderId);
+    const target = folderId ? folders.find((f) => f.id === folderId)?.name : 'No Folder';
+    addToast(`Moved to ${target || 'No Folder'}`, 'success');
   };
 
   const handleDelete = (n: Note) => {
@@ -64,6 +76,39 @@ export function Notes() {
       deleteNote(n.id);
       addToast('Note deleted', 'info');
     }
+  };
+
+  const handleFolderSave = () => {
+    if (!folderDraftName.trim()) { addToast('Folder name is required', 'error'); return; }
+    if (editingFolder) {
+      renameFolder(editingFolder.id, folderDraftName.trim());
+      addToast('Folder renamed', 'success');
+    } else {
+      addFolder(folderDraftName.trim());
+      addToast('Folder created', 'success');
+    }
+    setFolderModalOpen(false);
+    setFolderDraftName('');
+    setEditingFolder(null);
+  };
+
+  const handleFolderDelete = (f: Folder) => {
+    if (confirm(`Delete folder "${f.name}"? Notes inside will be moved to No Folder.`)) {
+      deleteFolder(f.id);
+      addToast('Folder deleted', 'info');
+    }
+  };
+
+  const openNewFolder = () => {
+    setEditingFolder(null);
+    setFolderDraftName('');
+    setFolderModalOpen(true);
+  };
+
+  const openEditFolder = (f: Folder) => {
+    setEditingFolder(f);
+    setFolderDraftName(f.name);
+    setFolderModalOpen(true);
   };
 
   return (
@@ -105,18 +150,9 @@ export function Notes() {
             <div key={n.id} className="card p-5 flex flex-col gap-3 hover:bg-cova-surfaceHover transition-colors">
               <div className="flex items-start justify-between gap-2">
                 <h3 className="font-semibold text-cova-text truncate flex-1">{n.title}</h3>
-                <button type="button" onClick={() => toggleFavorite(n.id)} className="p-1 rounded text-cova-textSecondary hover:text-cova-warning transition-colors flex-shrink-0" aria-label={n.favorite ? 'Unfavorite' : 'Favorite'}>
-                  <Star className={'w-4 h-4 ' + (n.favorite ? 'fill-cova-warning text-cova-warning' : '')} />
-                </button>
-              </div>
-              <p className="text-sm text-cova-textSecondary line-clamp-4 whitespace-pre-wrap break-words">
-                {n.content || <span className="italic text-cova-textMuted">Empty note</span>}
-              </p>
-              <div className="flex items-center justify-between pt-2 mt-auto border-t border-cova-border/50">
-                <span className="text-xs text-cova-textMuted">{formatDate(n.updatedAt)}</span>
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => setViewing(n)} className="p-1.5 rounded text-cova-textSecondary hover:bg-cova-surface hover:text-cova-text transition-colors" aria-label="View note">
-                    <Eye className="w-3.5 h-3.5" />
+                  <button type="button" onClick={() => toggleFavorite(n.id)} className="p-1 rounded text-cova-textSecondary hover:text-cova-warning transition-colors flex-shrink-0" aria-label={n.favorite ? 'Unfavorite' : 'Favorite'}>
+                    <Star className={'w-4 h-4 ' + (n.favorite ? 'fill-cova-warning text-cova-warning' : '')} />
                   </button>
                   <Dropdown
                     align="right"
@@ -127,28 +163,29 @@ export function Notes() {
                     }
                     items={[
                       { label: 'Edit', icon: <Pencil className="w-3.5 h-3.5" />, onClick: () => openEdit(n) },
+                      { label: 'View', icon: <Eye className="w-3.5 h-3.5" />, onClick: () => setViewing(n) },
+                      { label: n.folderId ? 'Unassign folder' : 'Assign folder', icon: <FileText className="w-3.5 h-3.5" />, onClick: () => handleMoveToFolder(n, n.folderId ? undefined : folders[0]?.id) },
+                      ...folders.filter((f) => f.id !== n.folderId).slice(0, 4).map((f) => ({ label: 'Move to ' + f.name, onClick: () => handleMoveToFolder(n, f.id) })),
                       { label: 'Delete', icon: <Trash2 className="w-3.5 h-3.5" />, onClick: () => handleDelete(n), danger: true },
                     ]}
                   />
                 </div>
+              </div>
+              <p className="text-sm text-cova-textSecondary line-clamp-4 whitespace-pre-wrap break-words">
+                {n.content || <span className="italic text-cova-textMuted">Empty note</span>}
+              </p>
+              <div className="flex items-center justify-between pt-2 mt-auto border-t border-cova-border/50">
+                <span className="text-xs text-cova-textMuted">{formatDate(n.updatedAt)}</span>
+                {n.folderId && folders.find((f) => f.id === n.folderId) && (
+                  <span className="px-2 py-0.5 rounded bg-cova-primary/15 text-cova-primary text-xs font-medium">{folders.find((f) => f.id === n.folderId)?.name}</span>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={editing ? 'Edit note' : 'New note'}
-        size="lg"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button variant="primary" onClick={handleSave}>{editing ? 'Save changes' : 'Create note'}</Button>
-          </>
-        }
-      >
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editing ? 'Edit note' : 'New note'} size="lg" footer={<><Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button><Button variant="primary" onClick={handleSave}>{editing ? 'Save changes' : 'Create note'}</Button></>}>
         <div className="space-y-3">
           <div>
             <Label htmlFor="note-title" required>Title</Label>
@@ -158,6 +195,16 @@ export function Notes() {
             <Label htmlFor="note-content">Content</Label>
             <textarea id="note-content" value={draftContent} onChange={(e) => setDraftContent(e.target.value)} placeholder="Write your note here..." className="input min-h-[180px] resize-y font-sans" />
           </div>
+          <div>
+            <Label htmlFor="note-folder">Folder</Label>
+            <select id="note-folder" value={draftFolderId || ''} onChange={(e) => setDraftFolderId(e.target.value || undefined)} className="input w-full">
+              <option value="">No Folder</option>
+              {folders.map((f) => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+            <button type="button" onClick={openNewFolder} className="mt-2 text-xs text-cova-primary hover:text-cova-primaryHover transition-colors">+ New folder</button>
+          </div>
         </div>
       </Modal>
 
@@ -165,10 +212,39 @@ export function Notes() {
         {viewing && (
           <div className="space-y-3">
             <p className="text-xs text-cova-textMuted">Last updated {formatDate(viewing.updatedAt)}</p>
+            {viewing.folderId && folders.find((f) => f.id === viewing.folderId) && (
+              <p className="text-xs text-cova-primary">Folder: {folders.find((f) => f.id === viewing.folderId)?.name}</p>
+            )}
             <p className="text-sm text-cova-text whitespace-pre-wrap break-words">{viewing.content || <span className="italic text-cova-textMuted">Empty note</span>}</p>
           </div>
         )}
       </Modal>
+
+      <Modal isOpen={folderModalOpen} onClose={() => { setFolderModalOpen(false); setFolderDraftName(''); setEditingFolder(null); }} title={editingFolder ? "Rename folder" : "New folder"} footer={<><Button variant="secondary" onClick={() => { setFolderModalOpen(false); setFolderDraftName(''); setEditingFolder(null); }}>Cancel</Button><Button variant="primary" onClick={handleFolderSave}>{editingFolder ? "Save" : "Create"}</Button></>}>
+        <div>
+          <Label htmlFor="folder-name" required>Folder name</Label>
+          <Input id="folder-name" value={folderDraftName} onChange={(e) => setFolderDraftName(e.target.value)} placeholder="e.g. Personal" autoFocus />
+        </div>
+      </Modal>
+
+      {/* Manage Folders Section */}
+      {folders.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-cova-textMuted uppercase tracking-wider">Folders</h2>
+            <button type="button" onClick={openNewFolder} className="text-xs text-cova-primary hover:text-cova-primaryHover transition-colors">+ New folder</button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {folders.map((f) => (
+              <div key={f.id} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cova-surface border border-cova-border">
+                <span className="text-sm text-cova-text">{f.name}</span>
+                <button type="button" onClick={() => openEditFolder(f)} className="p-0.5 rounded text-cova-textSecondary hover:text-cova-text transition-colors" aria-label="Rename folder"><Pencil className="w-3 h-3" /></button>
+                <button type="button" onClick={() => handleFolderDelete(f)} className="p-0.5 rounded text-cova-textSecondary hover:text-cova-danger transition-colors" aria-label="Delete folder"><Trash2 className="w-3 h-3" /></button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

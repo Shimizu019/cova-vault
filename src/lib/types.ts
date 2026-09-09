@@ -80,6 +80,7 @@ export interface Task {
   dueDate?: string;
   priority: 'low' | 'medium' | 'high';
   status: 'todo' | 'in_progress' | 'done';
+  folderId?: string;
   createdAt: string;
   updatedAt: string;
 }

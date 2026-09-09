@@ -1,16 +1,23 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Task, ActivityItem } from "../types";
+import type { Task, Folder, ActivityItem } from "../types";
 import { generateId } from "../utils";
 import { useActivityStore } from "./activityStore";
 
 interface TaskState {
   tasks: Task[];
+  folders: Folder[];
+
   addTask: (task: Omit<Task, "id" | "createdAt" | "updatedAt">) => Task;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   toggleStatus: (id: string) => void;
   getOpenTasks: () => Task[];
+
+  moveTaskToFolder: (id: string, folderId: string | undefined) => void;
+  addFolder: (name: string, type?: Folder["type"]) => Folder;
+  renameFolder: (id: string, name: string) => void;
+  deleteFolder: (id: string) => void;
 }
 
 const pushActivity = (activity: Omit<ActivityItem, "id" | "timestamp">) => {
@@ -25,6 +32,8 @@ export const useTaskStore = create<TaskState>()(
   persist(
     (set, get) => ({
       tasks: [],
+      folders: [],
+
       addTask: (task) => {
         const now = new Date().toISOString();
         const newTask: Task = { ...task, id: generateId(), createdAt: now, updatedAt: now };
@@ -74,7 +83,57 @@ export const useTaskStore = create<TaskState>()(
         }
       },
       getOpenTasks: () => get().tasks.filter((t) => t.status !== "done"),
+
+      moveTaskToFolder: (id, folderId) => {
+        const task = get().tasks.find((t) => t.id === id);
+        const folder = folderId ? get().folders.find((f) => f.id === folderId) : null;
+        set((s) => ({
+          tasks: s.tasks.map((t) =>
+            t.id === id ? { ...t, folderId, updatedAt: new Date().toISOString() } : t
+          ),
+        }));
+        if (task) {
+          pushActivity({
+            type: "tasks",
+            title: "Moved task",
+            detail: task.title + " to " + (folder ? folder.name : "No Folder"),
+          });
+        }
+      },
+
+      addFolder: (name, type = "tasks") => {
+        const newFolder: Folder = { id: generateId(), name, type, createdAt: new Date().toISOString() };
+        set((s) => ({ folders: [...s.folders, newFolder] }));
+        pushActivity({ type: "tasks", title: "Created folder", detail: name });
+        return newFolder;
+      },
+
+      renameFolder: (id, name) => {
+        set((s) => ({
+          folders: s.folders.map((f) => (f.id === id ? { ...f, name } : f)),
+        }));
+        pushActivity({ type: "tasks", title: "Renamed folder", detail: name });
+      },
+
+      deleteFolder: (id) => {
+        const folder = get().folders.find((f) => f.id === id);
+        set((s) => ({
+          folders: s.folders.filter((f) => f.id !== id),
+          tasks: s.tasks.map((t) =>
+            t.folderId === id ? { ...t, folderId: undefined, updatedAt: new Date().toISOString() } : t
+          ),
+        }));
+        if (folder) {
+          pushActivity({ type: "tasks", title: "Deleted folder", detail: folder.name });
+        }
+      },
     }),
-    { name: "cova-task-store" }
+    {
+      name: "cova-task-store",
+      partialize: (state) => ({
+        tasks: state.tasks,
+        folders: state.folders,
+      }),
+    }
   )
 );
