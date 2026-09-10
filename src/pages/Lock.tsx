@@ -245,7 +245,7 @@ export function Lock() {
                   data-form-type="other"
                   value={password}
                   onChange={(e) => handlePasswordChange(e.target.value)}
-                  placeholder="Enter master password"
+                  placeholder={firstTime ? 'CHANGEME' : 'Enter master password'}
                   disabled={isSubmitting}
                   aria-invalid={hasError || undefined}
                   aria-describedby={hasError ? PASSWORD_ERROR_ID : undefined}
