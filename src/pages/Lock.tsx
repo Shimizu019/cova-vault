@@ -3,7 +3,7 @@ import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { useUIStore, useSettingsStore } from '@store';
 import { useNavigate } from 'react-router-dom';
 import { isFirstTime, verify, clearMasterPassword, onMasterPasswordChange } from '@lib/auth/authStorage';
-import { deriveKey, setVaultKey } from '@lib/crypto/vaultStorage';
+import { deriveKey, setVaultKey, getOrCreateVaultSalt } from '@lib/crypto/vaultStorage';
 import CovaLogo from '@/assets/image/CovaLogo.png';
 
 const PASSWORD_INPUT_ID = 'cova-lock-password';
@@ -105,18 +105,26 @@ export function Lock() {
       return;
     }
 
-    // 4. First-time path: CHANGEME is correct → send the user to Settings
-    //    to set a real master password. After that, this branch is
-    //    unreachable because the stored hash no longer matches CHANGEME.
+    // 4. First-time path: CHANGEME is correct → unlock vault with CHANGEME-derived key
+    //    and send the user to Settings to set a real master password.
     if (showChangemeHint && submitted === 'CHANGEME') {
-      addToast('First-time access — please set a new password', 'info');
-      navigate('/settings#security');
+      try {
+        const salt = await getOrCreateVaultSalt();
+        const { key } = await deriveKey(submitted, salt);
+        setVaultKey(key);
+        updateSettings({ lastUnlockedAt: new Date().toISOString() });
+        addToast('First-time access — please set a new password', 'info');
+        navigate('/settings#security');
+      } catch {
+        setAuthError('Could not unlock vault');
+      }
       return;
     }
 
-    // 5. Derive encryption key from master password and unlock vault.
+    // 5. Returning user with a correct password → vault.
     try {
-      const { key } = await deriveKey(submitted);
+      const salt = await getOrCreateVaultSalt();
+      const { key } = await deriveKey(submitted, salt);
       setVaultKey(key);
       updateSettings({ lastUnlockedAt: new Date().toISOString() });
     } catch {
@@ -130,32 +138,38 @@ export function Lock() {
   };
 
   const handleForgotPassword = () => {
-    // Local-only vault: there is no email-based reset. Clearing the
-    // stored hash forces the app back into the first-time CHANGEME flow.
-    //
-    // This is a destructive-but-recoverable action (your stored credentials,
-    // notes, etc. are NOT deleted — only the master-password hash is wiped),
-    // so we ask for explicit confirmation to prevent an accidental click.
-    // We use the native confirm() to stay consistent with the rest of the
-    // codebase (see Credentials / Notes / Folders destructive actions).
     const ok = window.confirm(
-      'Reset master password?\n\n' +
-        'Your stored data (credentials, notes, wallet, etc.) will remain ' +
-        'intact — only the master password is cleared.\n\n' +
-        'After reset, sign in with the temporary password "CHANGEME" and ' +
-        'choose a new master password in Settings.\n\n' +
-        'Continue?'
+      'Reset vault?\n\n' +
+        'This will permanently delete all encrypted vault data (credentials, notes, wallet, etc.) ' +
+        'and reset the master password to "CHANGEME".\n\n' +
+        'This action cannot be undone. Continue?'
     );
     if (!ok) return;
 
     clearMasterPassword();
     setVaultKey(null);
+
+    const storeKeys = [
+      'cova:vault-salt',
+      'cova-credential-store',
+      'cova-note-store',
+      'cova-task-store',
+      'cova-wallet-store',
+      'cova-savings-store',
+      'cova-activity-store',
+      'cova-settings-store',
+      'cova-ui-store',
+    ];
+    for (const key of storeKeys) {
+      localStorage.removeItem(key);
+    }
+
     setShowChangemeHint(true);
     setAuthError(null);
     setPasswordError(null);
     setPassword('');
     addToast(
-      'Master password cleared. Use CHANGEME to sign in, then set a new one in Settings.',
+      'Vault reset complete. Use CHANGEME to sign in, then set a new password in Settings.',
       'info'
     );
   };

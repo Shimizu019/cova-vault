@@ -10,6 +10,7 @@ interface VaultStorageEngine {
 }
 
 let vaultKey: CryptoKey | null = null;
+const VAULT_SALT_KEY = 'cova:vault-salt';
 
 export function setVaultKey(key: CryptoKey | null) {
   vaultKey = key;
@@ -21,6 +22,26 @@ export function getVaultKey(): CryptoKey | null {
 
 export function isVaultUnlocked(): boolean {
   return vaultKey !== null;
+}
+
+export async function getOrCreateVaultSalt(): Promise<Uint8Array> {
+  const existing = localStorage.getItem(VAULT_SALT_KEY);
+  if (existing) {
+    const decoded = atob(existing);
+    const bytes = new Uint8Array(decoded.length);
+    for (let i = 0; i < decoded.length; i++) {
+      bytes[i] = decoded.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  localStorage.setItem(VAULT_SALT_KEY, btoa(String.fromCharCode(...salt)));
+  return salt;
+}
+
+export async function setVaultSalt(salt: Uint8Array): Promise<void> {
+  localStorage.setItem(VAULT_SALT_KEY, btoa(String.fromCharCode(...salt)));
 }
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -115,7 +136,8 @@ export const vaultStorage: VaultStorageEngine = {
 };
 
 export async function reencryptVault(oldKey: CryptoKey, newPassword: string): Promise<CryptoKey> {
-  const { key: newKey } = await deriveKey(newPassword);
+  const { key: newKey, salt: newSalt } = await deriveKey(newPassword);
+  await setVaultSalt(newSalt);
   
   const storeKeys = [
     'cova-credential-store',
