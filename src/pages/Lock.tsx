@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { useUIStore, useSettingsStore } from '@store';
+import { useNavigate } from 'react-router-dom';
 import { isFirstTime, verify, clearMasterPassword, onMasterPasswordChange } from '@lib/auth/authStorage';
 import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData } from '@lib/crypto/vaultStorage';
 import CovaLogo from '@/assets/image/CovaLogo.png';
@@ -103,9 +104,8 @@ export function Lock() {
       return;
     }
 
-    // 4. First-time path: CHANGEME is correct → clear any stale encrypted data,
-    //    reload the app so stores initialize cleanly with the new vault key,
-    //    then send the user to Settings to set a real master password.
+    // 4. First-time path: CHANGEME is correct → unlock vault with CHANGEME-derived key
+    //    and send the user to Settings to set a real master password.
     if (showChangemeHint && submitted === 'CHANGEME') {
       try {
         purgeVaultData();
@@ -114,10 +114,7 @@ export function Lock() {
         setVaultKey(key);
         updateSettings({ lastUnlockedAt: new Date().toISOString() });
         addToast('First-time access — please set a new password', 'info');
-        sessionStorage.setItem('cova:unlock-password', submitted);
-        setTimeout(() => {
-          window.location.reload();
-        }, 50);
+        navigate('/settings#security');
       } catch {
         setAuthError('Could not unlock vault');
       }
@@ -135,11 +132,18 @@ export function Lock() {
       return;
     }
 
-    // 6. Returning user with a correct password → vault.
+    // 6. Clear in-memory store state so they can rehydrate from localStorage
+    //    now that the vault key is available.
+    useCredentialStore.setState({ credentials: [], folders: [] });
+    useNoteStore.setState({ notes: [], folders: [] });
+    useTaskStore.setState({ tasks: [], folders: [] });
+    useWalletStore.setState({ records: [], startingBalance: 0, budgets: [] });
+    useSavingsStore.setState({ goals: [] });
+    useActivityStore.setState({ activities: [] });
+
+    // 7. Returning user with a correct password → vault.
     setShowChangemeHint(false);
-    sessionStorage.setItem('cova:unlock-password', submitted);
-    window.location.reload();
-  };
+    navigate('/dashboard');
 
   const handleForgotPassword = () => {
     const ok = window.confirm(
