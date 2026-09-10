@@ -102,7 +102,9 @@ export const defaultSettings: AppSettings = {
   notifications: true,
   twoFactorEnabled: false,
   backupEnabled: false,
-  autoLock: false,
+  autoLock: true,
+  autoLockTimeout: 5 * 60 * 1000,
   showPasswords: false,
+  clipboardClearDelay: 30 * 1000,
 };
 

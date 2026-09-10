@@ -150,7 +150,10 @@ export interface AppSettings {
   twoFactorEnabled: boolean;
   backupEnabled: boolean;
   autoLock: boolean;
+  autoLockTimeout: number;
   showPasswords: boolean;
+  clipboardClearDelay: number;
+  lastUnlockedAt?: string;
 }
 
 export type NavItem = {

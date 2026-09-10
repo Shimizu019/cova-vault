@@ -3,11 +3,12 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useUIStore } from '@store';
 import { PrimarySidebar } from './PrimarySidebar';
 import { SecondarySidebar } from './SecondarySidebar';
-import { Menu, Search, ChevronDown, X, User, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import { Menu, Search, ChevronDown, X, User, Settings as SettingsIcon, LogOut, Lock } from 'lucide-react';
 import { cn } from '@lib/utils';
 import { Avatar } from '@components/ui/Badge';
 import { useSettingsStore } from '@store';
 import { useAutoLock } from '@hooks/useAutoLock';
+import { setVaultKey } from '@lib/crypto/vaultStorage';
 
 export function AppShell() {
   const location = useLocation();
@@ -195,6 +196,19 @@ export function AppShell() {
                   <span>Settings</span>
                 </button>
                 <div className="my-1 border-t border-cova-border" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-cova-textSecondary hover:bg-cova-surfaceHover hover:text-cova-text transition-colors duration-fast w-full text-left"
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    setVaultKey(null);
+                    navigate('/lock');
+                  }}
+                >
+                  <Lock className="w-4 h-4" />
+                  <span>Lock Vault</span>
+                </button>
                 <button
                   type="button"
                   role="menuitem"

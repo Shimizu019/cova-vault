@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
-import { useUIStore } from '@store';
+import { useUIStore, useSettingsStore } from '@store';
 import { useNavigate } from 'react-router-dom';
 import { isFirstTime, verify, clearMasterPassword, onMasterPasswordChange } from '@lib/auth/authStorage';
 import { deriveKey, setVaultKey } from '@lib/crypto/vaultStorage';
@@ -21,6 +21,7 @@ export function Lock() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { addToast } = useUIStore();
+  const { updateSettings } = useSettingsStore();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -117,6 +118,7 @@ export function Lock() {
     try {
       const { key } = await deriveKey(submitted);
       setVaultKey(key);
+      updateSettings({ lastUnlockedAt: new Date().toISOString() });
     } catch {
       setAuthError('Could not unlock vault');
       return;
