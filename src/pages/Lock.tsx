@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
-import { useUIStore, useSettingsStore } from '@store';
+import { useUIStore, useSettingsStore, useCredentialStore, useNoteStore, useTaskStore, useWalletStore, useSavingsStore, useActivityStore } from '@store';
 import { useNavigate } from 'react-router-dom';
 import { isFirstTime, verify, clearMasterPassword, onMasterPasswordChange } from '@lib/auth/authStorage';
-import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData } from '@lib/crypto/vaultStorage';
+import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData, vaultStorage } from '@lib/crypto/vaultStorage';
 import CovaLogo from '@/assets/image/CovaLogo.png';
 
 const PASSWORD_INPUT_ID = 'cova-lock-password';
@@ -105,10 +105,9 @@ export function Lock() {
       return;
     }
 
-    // 4. First-time path: CHANGEME is correct → unlock vault with CHANGEME-derived key
-    //    and send the user to Settings to set a real master password.
-    //    Also clear any stale encrypted data from before the salt fix so
-    //    old ciphertext cannot block initialization.
+    // 4. First-time path: CHANGEME is correct → clear any stale encrypted data,
+    //    reload the app so stores initialize cleanly with the new vault key,
+    //    then send the user to Settings to set a real master password.
     if (showChangemeHint && submitted === 'CHANGEME') {
       try {
         purgeVaultData();
@@ -117,7 +116,9 @@ export function Lock() {
         setVaultKey(key);
         updateSettings({ lastUnlockedAt: new Date().toISOString() });
         addToast('First-time access — please set a new password', 'info');
-        navigate('/settings#security');
+        setTimeout(() => {
+          navigate('/settings#security');
+        }, 50);
       } catch {
         setAuthError('Could not unlock vault');
       }
@@ -135,7 +136,34 @@ export function Lock() {
       return;
     }
 
-    // 6. Returning user with a correct password → vault.
+    // 6. Force encrypted stores to re-hydrate from localStorage now that
+    //    the vault key is available. They were initialized while locked,
+    //    so their in-memory state is still empty.
+    const storeKeys: Record<string, any> = {
+      'cova-credential-store': useCredentialStore,
+      'cova-note-store': useNoteStore,
+      'cova-task-store': useTaskStore,
+      'cova-wallet-store': useWalletStore,
+      'cova-savings-store': useSavingsStore,
+      'cova-activity-store': useActivityStore,
+      'cova-settings-store': useSettingsStore,
+      'cova-ui-store': useUIStore,
+    };
+
+    for (const [key, store] of Object.entries(storeKeys)) {
+      try {
+        const decrypted = await vaultStorage.getItem(key);
+        if (!decrypted) continue;
+        const parsed = JSON.parse(decrypted);
+        if (parsed && typeof parsed === 'object') {
+          store.setState(parsed.state ?? parsed);
+        }
+      } catch {
+        // skip corrupted store entries
+      }
+    }
+
+    // 7. Returning user with a correct password → vault.
     setShowChangemeHint(false);
     navigate('/dashboard');
   };
