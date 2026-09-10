@@ -6,10 +6,10 @@ import { Modal } from '@components/ui/Modal';
 import { Dropdown } from '@components/ui/Dropdown';
 import { EmptyState } from '@components/ui/Card';
 import { MoveToFolderModal } from '@components/ui/MoveToFolderModal';
-import { useTaskStore, useUIStore } from '@store';
+import { useTaskStore, useCredentialStore, useUIStore } from '@store';
 import { useMoveToFolder } from '@hooks/useMoveToFolder';
 import { useNavigate } from 'react-router-dom';
-import type { Task } from '@lib/types';
+import type { Task, Folder } from '@lib/types';
 import { formatDate } from '@lib/utils';
 
 const STATUS_LABELS = { todo: 'To Do', in_progress: 'In Progress', done: 'Done' };
@@ -25,7 +25,8 @@ const PRIORITY_COLORS = {
 };
 
 export function Tasks() {
-  const { tasks, folders, moveTaskToFolder, addTask, updateTask, deleteTask, toggleStatus } = useTaskStore();
+  const { tasks, moveTaskToFolder, addTask, updateTask, deleteTask, toggleStatus } = useTaskStore();
+  const { folders } = useCredentialStore();
   const { addToast } = useUIStore();
   const navigate = useNavigate();
 

@@ -6,14 +6,15 @@ import { Modal } from '@components/ui/Modal';
 import { Dropdown } from '@components/ui/Dropdown';
 import { EmptyState } from '@components/ui/Card';
 import { MoveToFolderModal } from '@components/ui/MoveToFolderModal';
-import { useNoteStore, useUIStore } from '@store';
+import { useNoteStore, useCredentialStore, useUIStore } from '@store';
 import { useMoveToFolder } from '@hooks/useMoveToFolder';
 import { useNavigate } from 'react-router-dom';
 import type { Note } from '@lib/types';
 import { formatDate } from '@lib/utils';
 
 export function Notes() {
-  const { notes, folders, moveNoteToFolder, addNote, updateNote, deleteNote, toggleFavorite } = useNoteStore();
+  const { notes, moveNoteToFolder, addNote, updateNote, deleteNote, toggleFavorite } = useNoteStore();
+  const { folders } = useCredentialStore();
   const { addToast } = useUIStore();
   const navigate = useNavigate();
 
