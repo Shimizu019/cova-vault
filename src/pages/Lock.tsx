@@ -107,8 +107,11 @@ export function Lock() {
 
     // 4. First-time path: CHANGEME is correct → unlock vault with CHANGEME-derived key
     //    and send the user to Settings to set a real master password.
+    //    Also clear any stale encrypted data from before the salt fix so
+    //    old ciphertext cannot block initialization.
     if (showChangemeHint && submitted === 'CHANGEME') {
       try {
+        purgeVaultData();
         const salt = await getOrCreateVaultSalt();
         const { key } = await deriveKey(submitted, salt);
         setVaultKey(key);
@@ -149,6 +152,7 @@ export function Lock() {
     clearMasterPassword();
     setVaultKey(null);
     purgeVaultData();
+    setFirstTime(true);
     setShowChangemeHint(true);
     setAuthError(null);
     setPasswordError(null);
