@@ -1,3 +1,5 @@
+import { deriveKey } from './vaultCrypto';
+
 type Listener = () => void;
 
 interface VaultStorageEngine {
@@ -39,7 +41,7 @@ function base64ToBuffer(base64: string): Uint8Array {
   return bytes;
 }
 
-async function encryptPayload(plaintext: string): Promise<string> {
+export async function encryptPayload(plaintext: string): Promise<string> {
   if (!vaultKey) {
     throw new Error('Vault is locked');
   }
@@ -60,7 +62,7 @@ async function encryptPayload(plaintext: string): Promise<string> {
   return JSON.stringify(payload);
 }
 
-async function decryptPayload(encrypted: string): Promise<string> {
+export async function decryptPayload(encrypted: string): Promise<string> {
   if (!vaultKey) {
     throw new Error('Vault is locked');
   }
@@ -112,4 +114,56 @@ export const vaultStorage: VaultStorageEngine = {
   },
 };
 
+export async function reencryptVault(oldKey: CryptoKey, newPassword: string): Promise<CryptoKey> {
+  const { key: newKey } = await deriveKey(newPassword);
+  
+  const storeKeys = [
+    'cova-credential-store',
+    'cova-note-store',
+    'cova-task-store',
+    'cova-wallet-store',
+    'cova-savings-store',
+    'cova-activity-store',
+    'cova-settings-store',
+    'cova-ui-store',
+  ];
+
+  for (const storeKey of storeKeys) {
+    const raw = localStorage.getItem(storeKey);
+    if (!raw) continue;
+    
+    let plaintext: string;
+    try {
+      const payload = JSON.parse(raw);
+      const iv = base64ToBuffer(payload.iv);
+      const data = base64ToBuffer(payload.data);
+      const decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: iv.buffer as ArrayBuffer },
+        oldKey,
+        data.buffer as ArrayBuffer
+      );
+      plaintext = new TextDecoder().decode(decrypted);
+    } catch {
+      continue;
+    }
+
+    const newIv = crypto.getRandomValues(new Uint8Array(12));
+    const encoded = new TextEncoder().encode(plaintext);
+    const newCiphertext = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: newIv.buffer as ArrayBuffer },
+      newKey,
+      encoded
+    );
+
+    const newPayload = {
+      iv: arrayBufferToBase64(newIv.buffer as ArrayBuffer),
+      data: arrayBufferToBase64(newCiphertext),
+    };
+    localStorage.setItem(storeKey, JSON.stringify(newPayload));
+  }
+
+  return newKey;
+}
+
 export { deriveKey } from './vaultCrypto';
+

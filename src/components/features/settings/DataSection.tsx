@@ -2,26 +2,34 @@ import { Database, Download, Upload, Trash2 } from 'lucide-react';
 import { Button } from '@components/ui/Button';
 import { useCredentialStore, useSettingsStore, useNoteStore, useUIStore, useActivityStore, useTaskStore, useWalletStore, useSavingsStore } from '@store';
 import { setVaultKey } from '@lib/crypto/vaultStorage';
+import { exportEncryptedBackup, importEncryptedBackup } from '@lib/crypto/backup';
 
 export function DataSection() {
   const { credentials } = useCredentialStore();
   const { notes } = useNoteStore();
-  const { settings, user } = useSettingsStore();
   const { addToast } = useUIStore();
 
-  const handleExport = () => {
-    const data = { credentials, notes, settings, user };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `cova-backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    addToast('Data exported successfully', 'success');
+  const handleExport = async () => {
+    const data = {
+      credentials: useCredentialStore.getState().credentials,
+      folders: useCredentialStore.getState().folders,
+      notes: useNoteStore.getState().notes,
+      tasks: useTaskStore.getState().tasks,
+      wallet: {
+        records: useWalletStore.getState().records,
+        startingBalance: useWalletStore.getState().startingBalance,
+        budgets: useWalletStore.getState().budgets,
+      },
+      savings: useSavingsStore.getState().goals,
+      activities: useActivityStore.getState().activities,
+      settings: useSettingsStore.getState().settings,
+      user: useSettingsStore.getState().user,
+    };
+    await exportEncryptedBackup(data);
+    addToast('Encrypted backup exported', 'success');
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
@@ -29,11 +37,37 @@ export function DataSection() {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       try {
-        const text = await file.text();
-        const data = JSON.parse(text);
-        addToast(`Imported ${data.credentials?.length ?? 0} credentials`, 'success');
+        const data = await importEncryptedBackup(file) as {
+          credentials?: any[];
+          folders?: any[];
+          notes?: any[];
+          tasks?: any[];
+          wallet?: { records?: any[]; startingBalance?: number; budgets?: any[] };
+          savings?: any[];
+          activities?: any[];
+          settings?: any;
+          user?: any;
+        };
+        
+        if (data.credentials) useCredentialStore.setState({ credentials: data.credentials });
+        if (data.folders) useCredentialStore.setState({ folders: data.folders });
+        if (data.notes) useNoteStore.setState({ notes: data.notes });
+        if (data.tasks) useTaskStore.setState({ tasks: data.tasks });
+        if (data.wallet) {
+          useWalletStore.setState({ 
+            records: data.wallet.records || [],
+            startingBalance: data.wallet.startingBalance ?? 0,
+            budgets: data.wallet.budgets || [],
+          });
+        }
+        if (data.savings) useSavingsStore.setState({ goals: data.savings });
+        if (data.activities) useActivityStore.setState({ activities: data.activities });
+        if (data.settings) useSettingsStore.setState({ settings: data.settings });
+        if (data.user) useSettingsStore.setState({ user: data.user });
+        
+        addToast('Encrypted backup imported successfully', 'success');
       } catch {
-        addToast('Failed to import data', 'error');
+        addToast('Failed to import backup. Make sure it was exported from this vault and the vault is unlocked.', 'error');
       }
     };
     input.click();

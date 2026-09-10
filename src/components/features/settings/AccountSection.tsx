@@ -5,6 +5,7 @@ import { useSettingsStore, useUIStore } from '@store';
 import { useNavigate } from 'react-router-dom';
 import { getInitials } from '@lib/utils';
 import { setMasterPassword } from '@lib/auth/authStorage';
+import { getVaultKey, reencryptVault, setVaultKey } from '@lib/crypto/vaultStorage';
 
 export function AccountSection() {
   const { user, updateUser } = useSettingsStore();
@@ -59,6 +60,14 @@ export function AccountSection() {
 
     setIsSavingPassword(true);
     try {
+      const oldKey = getVaultKey();
+      if (!oldKey) {
+        addToast('Vault is locked. Please unlock first.', 'error');
+        setIsSavingPassword(false);
+        return;
+      }
+      const newKey = await reencryptVault(oldKey, newPassword);
+      setVaultKey(newKey);
       await setMasterPassword(newPassword);
       addToast('Master password updated. Please unlock with your new password.', 'success');
       setNewPassword('');
