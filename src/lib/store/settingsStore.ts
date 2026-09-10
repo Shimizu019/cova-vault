@@ -1,6 +1,6 @@
 ﻿import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { AppSettings, User } from '../types';
+import { encryptedPersist } from '../crypto/encryptedStorage';
 
 interface SettingsState {
   settings: AppSettings;
@@ -34,7 +34,7 @@ const defaultUser: User = {
 };
 
 export const useSettingsStore = create<SettingsState>()(
-  persist(
+  encryptedPersist(
     (set) => ({
       settings: defaultSettings,
       user: defaultUser,

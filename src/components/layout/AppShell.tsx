@@ -7,6 +7,7 @@ import { Menu, Search, ChevronDown, X, User, Settings as SettingsIcon, LogOut } 
 import { cn } from '@lib/utils';
 import { Avatar } from '@components/ui/Badge';
 import { useSettingsStore } from '@store';
+import { useAutoLock } from '@hooks/useAutoLock';
 
 export function AppShell() {
   const location = useLocation();
@@ -17,6 +18,8 @@ export function AppShell() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
+
+  useAutoLock();
 
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
 

@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { ActivityItem } from "../types";
+import { encryptedPersist } from "../crypto/encryptedStorage";
 
 interface ActivityState {
   activities: ActivityItem[];
@@ -9,7 +9,7 @@ interface ActivityState {
 }
 
 export const useActivityStore = create<ActivityState>()(
-  persist(
+  encryptedPersist(
     (set) => ({
       activities: [],
       addActivity: (activity) => {

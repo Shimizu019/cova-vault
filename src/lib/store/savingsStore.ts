@@ -1,7 +1,7 @@
 import { create } from "zustand"
-import { persist } from "zustand/middleware"
 import type { ActivityItem, SavingsGoal } from "../types"
 import { useActivityStore } from "./activityStore"
+import { encryptedPersist } from "../crypto/encryptedStorage"
 
 interface SavingsStoreState {
   goals: SavingsGoal[]
@@ -21,7 +21,7 @@ const pushActivity = (activity: Omit<ActivityItem, "id" | "timestamp">) => {
 };
 
 export const useSavingsStore = create<SavingsStoreState>()(
-  persist(
+  encryptedPersist(
     (set, get) => ({
       goals: [],
       setGoals: (goals) => set({ goals }),
@@ -43,7 +43,7 @@ export const useSavingsStore = create<SavingsStoreState>()(
     }),
     {
       name: "cova-savings-store",
-      partialize: (state) => state.goals,
+      partialize: (state) => ({ goals: state.goals }),
     }
   )
 )

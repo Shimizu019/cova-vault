@@ -11,6 +11,7 @@ import { useCredentialStore, useUIStore } from '@store';
 import { CredentialModal } from '@features/credentials/CredentialModal';
 import { CredentialRow } from '@features/credentials/CredentialRow';
 import { maskPassword } from '@lib/utils';
+import { secureCopy } from '@lib/utils/clipboard';
 import type { Credential } from '@lib/types';
 
 export function Credentials() {
@@ -37,8 +38,8 @@ export function Credentials() {
     });
   }, [credentials, search, selectedTag]);
 
-  const handleCopy = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
+  const handleCopy = async (text: string, label: string) => {
+    await secureCopy(text);
     addToast(`${label} copied to clipboard`, 'success');
   };
 

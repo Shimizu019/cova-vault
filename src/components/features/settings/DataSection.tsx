@@ -1,6 +1,7 @@
 import { Database, Download, Upload, Trash2 } from 'lucide-react';
 import { Button } from '@components/ui/Button';
-import { useCredentialStore, useSettingsStore, useNoteStore, useUIStore, useActivityStore } from '@store';
+import { useCredentialStore, useSettingsStore, useNoteStore, useUIStore, useActivityStore, useTaskStore, useWalletStore, useSavingsStore } from '@store';
+import { setVaultKey } from '@lib/crypto/vaultStorage';
 
 export function DataSection() {
   const { credentials } = useCredentialStore();
@@ -48,6 +49,26 @@ export function DataSection() {
 
   const handleDeleteAll = () => {
     if (confirm('Delete ALL data? This cannot be undone.')) {
+      setVaultKey(null);
+      useCredentialStore.getState().credentials = [];
+      useCredentialStore.getState().folders = [];
+      useNoteStore.getState().notes = [];
+      useNoteStore.getState().folders = [];
+      useTaskStore.getState().tasks = [];
+      useTaskStore.getState().folders = [];
+      useWalletStore.getState().records = [];
+      useWalletStore.getState().budgets = [];
+      useWalletStore.getState().startingBalance = 0;
+      useSavingsStore.getState().goals = [];
+      useActivityStore.getState().activities = [];
+      useSettingsStore.getState().user = {
+        id: 'user-1',
+        name: 'Cova User',
+        displayName: 'Cova User',
+        email: 'user@cova.app',
+        avatarInitial: 'CU',
+        createdAt: new Date().toISOString(),
+      };
       localStorage.clear();
       window.location.reload();
     }

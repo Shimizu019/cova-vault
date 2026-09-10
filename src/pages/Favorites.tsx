@@ -7,6 +7,7 @@ import { Dropdown } from '@components/ui/Dropdown';
 import { EmptyState } from '@components/ui/Card';
 import { useCredentialStore, useUIStore } from '@store';
 import { maskPassword, getDomainFromUrl } from '@lib/utils';
+import { secureCopy } from '@lib/utils/clipboard';
 import type { Credential } from '@lib/types';
 
 export function Favorites() {
@@ -20,8 +21,8 @@ export function Favorites() {
   const q = search.toLowerCase();
   const shown = favs.filter((c) => !q || c.name.toLowerCase().includes(q) || c.username.toLowerCase().includes(q));
 
-  const handleCopy = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
+  const handleCopy = async (text: string, label: string) => {
+    await secureCopy(text);
     addToast(label + ' copied to clipboard', 'success');
   };
 

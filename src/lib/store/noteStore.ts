@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { Note, Folder, ActivityItem } from "../types";
 import { generateId } from "../utils";
 import { useActivityStore } from "./activityStore";
+import { encryptedPersist } from "../crypto/encryptedStorage";
 
 interface NoteState {
   notes: Note[];
@@ -28,7 +28,7 @@ const pushActivity = (activity: Omit<ActivityItem, "id" | "timestamp">) => {
 };
 
 export const useNoteStore = create<NoteState>()(
-  persist(
+  encryptedPersist(
     (set, get) => ({
       notes: [],
       folders: [],

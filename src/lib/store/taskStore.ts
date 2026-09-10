@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { Task, Folder, ActivityItem } from "../types";
 import { generateId } from "../utils";
 import { useActivityStore } from "./activityStore";
+import { encryptedPersist } from "../crypto/encryptedStorage";
 
 interface TaskState {
   tasks: Task[];
@@ -29,7 +29,7 @@ const pushActivity = (activity: Omit<ActivityItem, "id" | "timestamp">) => {
 };
 
 export const useTaskStore = create<TaskState>()(
-  persist(
+  encryptedPersist(
     (set, get) => ({
       tasks: [],
       folders: [],

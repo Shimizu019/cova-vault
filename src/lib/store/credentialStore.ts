@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import type { Credential, Folder } from "../types";
 import { generateId } from "../utils";
-import { persist } from "zustand/middleware";
 import { useActivityStore } from "./activityStore";
+import { encryptedPersist } from "../crypto/encryptedStorage";
 
 interface CredentialState {
   credentials: Credential[];
@@ -27,7 +27,7 @@ interface CredentialState {
 }
 
 export const useCredentialStore = create<CredentialState>()(
-  persist(
+  encryptedPersist(
     (set, get) => ({
       credentials: [],
       folders: [],

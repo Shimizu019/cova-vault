@@ -1,7 +1,7 @@
 ﻿import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { ToastMessage } from '../types';
 import { generateId } from '../utils';
+import { encryptedPersist } from '../crypto/encryptedStorage';
 
 interface UIState {
   sidebarCollapsed: boolean;
@@ -17,7 +17,7 @@ interface UIState {
 }
 
 export const useUIStore = create<UIState>()(
-  persist(
+  encryptedPersist(
     (set) => ({
       sidebarCollapsed: false,
       searchQuery: '',

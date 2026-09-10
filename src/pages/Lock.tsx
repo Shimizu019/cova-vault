@@ -3,6 +3,7 @@ import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { useUIStore } from '@store';
 import { useNavigate } from 'react-router-dom';
 import { isFirstTime, verify, clearMasterPassword, onMasterPasswordChange } from '@lib/auth/authStorage';
+import { deriveKey, setVaultKey } from '@lib/crypto/vaultStorage';
 import CovaLogo from '@/assets/image/CovaLogo.png';
 
 const PASSWORD_INPUT_ID = 'cova-lock-password';
@@ -112,7 +113,16 @@ export function Lock() {
       return;
     }
 
-    // 5. Returning user with a correct password → vault.
+    // 5. Derive encryption key from master password and unlock vault.
+    try {
+      const { key } = await deriveKey(submitted);
+      setVaultKey(key);
+    } catch {
+      setAuthError('Could not unlock vault');
+      return;
+    }
+
+    // 6. Returning user with a correct password → vault.
     setShowChangemeHint(false);
     navigate('/dashboard');
   };
@@ -137,6 +147,7 @@ export function Lock() {
     if (!ok) return;
 
     clearMasterPassword();
+    setVaultKey(null);
     setShowChangemeHint(true);
     setAuthError(null);
     setPasswordError(null);

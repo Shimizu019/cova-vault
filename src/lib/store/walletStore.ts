@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { WalletRecord, Budget, ActivityItem } from "../types";
 import { generateId, formatPHP } from "../utils";
 import { useActivityStore } from "./activityStore";
+import { encryptedPersist } from "../crypto/encryptedStorage";
 
 export interface WalletState {
   records: WalletRecord[];
@@ -35,7 +35,7 @@ const pushActivity = (activity: Omit<ActivityItem, "id" | "timestamp">) => {
 };
 
 export const useWalletStore = create<WalletState>()(
-  persist(
+  encryptedPersist(
     (set, get) => ({
       records: [],
       startingBalance: 0,

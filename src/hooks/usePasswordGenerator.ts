@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useUIStore, useCredentialStore } from '@store';
 import { calculatePasswordStrength } from '@lib/utils';
+import { secureCopy } from '@lib/utils/clipboard';
 
 interface GeneratorOptions {
   uppercase: boolean;
@@ -56,7 +57,7 @@ export function usePasswordGenerator() {
   }, [length, options]);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(password);
+    await secureCopy(password);
     setCopied(true);
     addToast('Password copied to clipboard', 'success');
     setTimeout(() => setCopied(false), 2000);
