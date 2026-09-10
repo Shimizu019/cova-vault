@@ -5,13 +5,17 @@ import { Input, Label } from '@components/ui/Input';
 import { Modal } from '@components/ui/Modal';
 import { Dropdown } from '@components/ui/Dropdown';
 import { EmptyState } from '@components/ui/Card';
+import { MoveToFolderModal } from '@components/ui/MoveToFolderModal';
 import { useNoteStore, useUIStore } from '@store';
-import type { Note, Folder } from '@lib/types';
+import { useMoveToFolder } from '@hooks/useMoveToFolder';
+import { useNavigate } from 'react-router-dom';
+import type { Note } from '@lib/types';
 import { formatDate } from '@lib/utils';
 
 export function Notes() {
-  const { notes, folders, addFolder, renameFolder, deleteFolder, moveNoteToFolder, addNote, updateNote, deleteNote, toggleFavorite } = useNoteStore();
+  const { notes, folders, moveNoteToFolder, addNote, updateNote, deleteNote, toggleFavorite } = useNoteStore();
   const { addToast } = useUIStore();
+  const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
   const [showFavorites, setShowFavorites] = useState(false);
@@ -21,9 +25,7 @@ export function Notes() {
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
   const [draftFolderId, setDraftFolderId] = useState<string | undefined>(undefined);
-  const [folderModalOpen, setFolderModalOpen] = useState(false);
-  const [folderDraftName, setFolderDraftName] = useState('');
-  const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+  const [movingNoteId, setMovingNoteId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -33,6 +35,20 @@ export function Notes() {
       return matchQ && matchFav;
     });
   }, [notes, search, showFavorites]);
+
+  const movingNote = movingNoteId ? notes.find((n) => n.id === movingNoteId) ?? null : null;
+
+  const { isModalOpen: isMoveModalOpen, openModal, closeModal, handleMove } = useMoveToFolder({
+    folders,
+    onMove: (folderId) => {
+      if (movingNote) {
+        moveNoteToFolder(movingNote.id, folderId);
+        const target = folderId ? folders.find((f) => f.id === folderId)?.name : 'No Folder';
+        addToast(`Moved to ${target || 'No Folder'}`, 'success');
+      }
+    },
+    onCreateFolder: () => navigate('/folders'),
+  });
 
   const openNew = () => {
     setEditing(null);
@@ -65,50 +81,11 @@ export function Notes() {
     setIsModalOpen(false);
   };
 
-  const handleMoveToFolder = (note: Note, folderId: string | undefined) => {
-    moveNoteToFolder(note.id, folderId);
-    const target = folderId ? folders.find((f) => f.id === folderId)?.name : 'No Folder';
-    addToast(`Moved to ${target || 'No Folder'}`, 'success');
-  };
-
   const handleDelete = (n: Note) => {
     if (confirm(`Delete "${n.title}"? This cannot be undone.`)) {
       deleteNote(n.id);
       addToast('Note deleted', 'info');
     }
-  };
-
-  const handleFolderSave = () => {
-    if (!folderDraftName.trim()) { addToast('Folder name is required', 'error'); return; }
-    if (editingFolder) {
-      renameFolder(editingFolder.id, folderDraftName.trim());
-      addToast('Folder renamed', 'success');
-    } else {
-      addFolder(folderDraftName.trim());
-      addToast('Folder created', 'success');
-    }
-    setFolderModalOpen(false);
-    setFolderDraftName('');
-    setEditingFolder(null);
-  };
-
-  const handleFolderDelete = (f: Folder) => {
-    if (confirm(`Delete folder "${f.name}"? Notes inside will be moved to No Folder.`)) {
-      deleteFolder(f.id);
-      addToast('Folder deleted', 'info');
-    }
-  };
-
-  const openNewFolder = () => {
-    setEditingFolder(null);
-    setFolderDraftName('');
-    setFolderModalOpen(true);
-  };
-
-  const openEditFolder = (f: Folder) => {
-    setEditingFolder(f);
-    setFolderDraftName(f.name);
-    setFolderModalOpen(true);
   };
 
   return (
@@ -164,8 +141,7 @@ export function Notes() {
                     items={[
                       { label: 'Edit', icon: <Pencil className="w-3.5 h-3.5" />, onClick: () => openEdit(n) },
                       { label: 'View', icon: <Eye className="w-3.5 h-3.5" />, onClick: () => setViewing(n) },
-                      { label: n.folderId ? 'Unassign folder' : 'Assign folder', icon: <FileText className="w-3.5 h-3.5" />, onClick: () => handleMoveToFolder(n, n.folderId ? undefined : folders[0]?.id) },
-                      ...folders.filter((f) => f.id !== n.folderId).slice(0, 4).map((f) => ({ label: 'Move to ' + f.name, onClick: () => handleMoveToFolder(n, f.id) })),
+                      { label: n.folderId ? 'Move to folder' : 'Assign folder', icon: <FileText className="w-3.5 h-3.5" />, onClick: () => { setMovingNoteId(n.id); openModal(n.folderId); } },
                       { label: 'Delete', icon: <Trash2 className="w-3.5 h-3.5" />, onClick: () => handleDelete(n), danger: true },
                     ]}
                   />
@@ -203,7 +179,6 @@ export function Notes() {
                 <option key={f.id} value={f.id}>{f.name}</option>
               ))}
             </select>
-            <button type="button" onClick={openNewFolder} className="mt-2 text-xs text-cova-primary hover:text-cova-primaryHover transition-colors">+ New folder</button>
           </div>
         </div>
       </Modal>
@@ -220,31 +195,15 @@ export function Notes() {
         )}
       </Modal>
 
-      <Modal isOpen={folderModalOpen} onClose={() => { setFolderModalOpen(false); setFolderDraftName(''); setEditingFolder(null); }} title={editingFolder ? "Rename folder" : "New folder"} footer={<><Button variant="secondary" onClick={() => { setFolderModalOpen(false); setFolderDraftName(''); setEditingFolder(null); }}>Cancel</Button><Button variant="primary" onClick={handleFolderSave}>{editingFolder ? "Save" : "Create"}</Button></>}>
-        <div>
-          <Label htmlFor="folder-name" required>Folder name</Label>
-          <Input id="folder-name" value={folderDraftName} onChange={(e) => setFolderDraftName(e.target.value)} placeholder="e.g. Personal" autoFocus />
-        </div>
-      </Modal>
-
-      {/* Manage Folders Section */}
-      {folders.length > 0 && (
-        <div className="mt-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-cova-textMuted uppercase tracking-wider">Folders</h2>
-            <button type="button" onClick={openNewFolder} className="text-xs text-cova-primary hover:text-cova-primaryHover transition-colors">+ New folder</button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {folders.map((f) => (
-              <div key={f.id} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cova-surface border border-cova-border">
-                <span className="text-sm text-cova-text">{f.name}</span>
-                <button type="button" onClick={() => openEditFolder(f)} className="p-0.5 rounded text-cova-textSecondary hover:text-cova-text transition-colors" aria-label="Rename folder"><Pencil className="w-3 h-3" /></button>
-                <button type="button" onClick={() => handleFolderDelete(f)} className="p-0.5 rounded text-cova-textSecondary hover:text-cova-danger transition-colors" aria-label="Delete folder"><Trash2 className="w-3 h-3" /></button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <MoveToFolderModal
+        isOpen={isMoveModalOpen}
+        onClose={closeModal}
+        folders={folders}
+        currentFolderId={movingNote?.folderId}
+        onMove={handleMove}
+        onCreateFolder={() => navigate('/folders')}
+        itemName={movingNote?.title || ''}
+      />
     </div>
   );
 }

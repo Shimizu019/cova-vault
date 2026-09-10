@@ -1,9 +1,9 @@
-﻿import { useState } from "react";
-import { Key, Eye, EyeOff, Copy, MoreVertical, Star, FolderOpen } from "lucide-react";
+﻿import { Key, Eye, EyeOff, Copy, MoreVertical, Star } from "lucide-react";
 import { Dropdown } from "@components/ui/Dropdown";
-import { Modal } from "@components/ui/Modal";
-import { Button } from "@components/ui/Button";
 import { useCredentialStore, useUIStore } from "@store";
+import { useMoveToFolder } from "@hooks/useMoveToFolder";
+import { MoveToFolderModal } from "@components/ui/MoveToFolderModal";
+import { useNavigate } from "react-router-dom";
 import { maskPassword, getDomainFromUrl, getServiceNameFromUrl } from "@lib/utils";
 import type { Credential } from "@lib/types";
 
@@ -23,19 +23,18 @@ export function CredentialRow({
   onDelete,
 }: CredentialRowProps) {
   const { toggleFavorite, folders, moveCredentialToFolder } = useCredentialStore();
-  const { passwordVisibility, togglePasswordVisibility, addToast } = useUIStore();
+  const { passwordVisibility, togglePasswordVisibility } = useUIStore();
+  const navigate = useNavigate();
   const visible = passwordVisibility[cred.id] ?? false;
-  const [showMoveModal, setShowMoveModal] = useState(false);
+
+  const { isModalOpen, openModal, closeModal, handleMove } = useMoveToFolder({
+    folders,
+    onMove: (folderId) => moveCredentialToFolder(cred.id, folderId),
+    onCreateFolder: () => navigate('/folders'),
+  });
 
   const domain = getDomainFromUrl(cred.website);
   const service = getServiceNameFromUrl(cred.website);
-
-  const handleMoveToFolder = (targetFolderId: string | undefined) => {
-    moveCredentialToFolder(cred.id, targetFolderId);
-    const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) : null;
-    addToast(`Moved to ${targetFolder ? targetFolder.name : "No Folder"}`, "success");
-    setShowMoveModal(false);
-  };
 
   return (
     <>
@@ -98,7 +97,7 @@ export function CredentialRow({
                 { label: "Copy username", onClick: () => onCopy(cred.username, "Username") },
                 { label: "Open website", onClick: () => onOpenWebsite(cred.website), disabled: !cred.website },
                 { label: "Edit", onClick: () => onEdit(cred) },
-                { label: "Move to folder", onClick: () => setShowMoveModal(true) },
+                { label: "Move to folder", onClick: () => openModal() },
                 { label: "Delete", onClick: () => onDelete(cred), danger: true },
               ]}
             />
@@ -107,48 +106,15 @@ export function CredentialRow({
       </tr>
 
       {/* Move to Folder Modal */}
-      <Modal
-        isOpen={showMoveModal}
-        onClose={() => setShowMoveModal(false)}
-        title="Move to Folder"
-        size="sm"
-        footer={
-          <Button variant="secondary" onClick={() => setShowMoveModal(false)}>Cancel</Button>
-        }
-      >
-        <div className="space-y-2">
-          <p className="text-sm text-cova-textMuted mb-3">Select a folder for "{cred.name}"</p>
-          <button
-            type="button"
-            onClick={() => handleMoveToFolder(undefined)}
-            className={`w-full px-4 py-3 rounded-lg border text-left transition-colors flex items-center gap-3 ${
-              !cred.folderId
-                ? "border-cova-primary bg-cova-primary/10 text-cova-primary"
-                : "border-cova-border bg-cova-bg text-cova-text hover:bg-cova-surfaceHover"
-            }`}
-          >
-            <FolderOpen className="w-5 h-5" />
-            <span className="flex-1">No Folder</span>
-            {!cred.folderId && <span className="text-xs font-medium">Current</span>}
-          </button>
-          {folders.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => handleMoveToFolder(f.id)}
-              className={`w-full px-4 py-3 rounded-lg border text-left transition-colors flex items-center gap-3 ${
-                cred.folderId === f.id
-                  ? "border-cova-primary bg-cova-primary/10 text-cova-primary"
-                  : "border-cova-border bg-cova-bg text-cova-text hover:bg-cova-surfaceHover"
-              }`}
-            >
-              <FolderOpen className="w-5 h-5" />
-              <span className="flex-1">{f.name}</span>
-              {cred.folderId === f.id && <span className="text-xs font-medium">Current</span>}
-            </button>
-          ))}
-        </div>
-      </Modal>
+      <MoveToFolderModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        folders={folders}
+        currentFolderId={cred.folderId}
+        onMove={handleMove}
+        onCreateFolder={() => navigate('/folders')}
+        itemName={cred.name}
+      />
     </>
   );
 }

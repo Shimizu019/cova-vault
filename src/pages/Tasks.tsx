@@ -5,8 +5,11 @@ import { Input, Label } from '@components/ui/Input';
 import { Modal } from '@components/ui/Modal';
 import { Dropdown } from '@components/ui/Dropdown';
 import { EmptyState } from '@components/ui/Card';
+import { MoveToFolderModal } from '@components/ui/MoveToFolderModal';
 import { useTaskStore, useUIStore } from '@store';
-import type { Task, Folder } from '@lib/types';
+import { useMoveToFolder } from '@hooks/useMoveToFolder';
+import { useNavigate } from 'react-router-dom';
+import type { Task } from '@lib/types';
 import { formatDate } from '@lib/utils';
 
 const STATUS_LABELS = { todo: 'To Do', in_progress: 'In Progress', done: 'Done' };
@@ -22,8 +25,9 @@ const PRIORITY_COLORS = {
 };
 
 export function Tasks() {
-  const { tasks, folders, addFolder, renameFolder, moveTaskToFolder, addTask, updateTask, deleteTask, toggleStatus } = useTaskStore();
+  const { tasks, folders, moveTaskToFolder, addTask, updateTask, deleteTask, toggleStatus } = useTaskStore();
   const { addToast } = useUIStore();
+  const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<Task['status'] | 'all'>('all');
@@ -35,9 +39,7 @@ export function Tasks() {
   const [draftPriority, setDraftPriority] = useState<Task['priority']>('medium');
   const [draftDue, setDraftDue] = useState('');
   const [draftFolderId, setDraftFolderId] = useState<string | undefined>(undefined);
-  const [folderModalOpen, setFolderModalOpen] = useState(false);
-  const [folderDraftName, setFolderDraftName] = useState('');
-  const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+  const [movingTaskId, setMovingTaskId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -47,6 +49,20 @@ export function Tasks() {
       return matchQ && matchS;
     });
   }, [tasks, search, statusFilter]);
+
+  const movingTask = movingTaskId ? tasks.find((t) => t.id === movingTaskId) ?? null : null;
+
+  const { isModalOpen: isMoveModalOpen, openModal, closeModal, handleMove } = useMoveToFolder({
+    folders,
+    onMove: (folderId) => {
+      if (movingTask) {
+        moveTaskToFolder(movingTask.id, folderId);
+        const target = folderId ? folders.find((f) => f.id === folderId)?.name : 'No Folder';
+        addToast(`Moved to ${target || 'No Folder'}`, 'success');
+      }
+    },
+    onCreateFolder: () => navigate('/folders'),
+  });
 
   const openNew = () => {
     setEditing(null);
@@ -73,34 +89,8 @@ export function Tasks() {
     setIsModalOpen(false);
   };
 
-  const handleMoveToFolder = (task: Task, folderId: string | undefined) => {
-    moveTaskToFolder(task.id, folderId);
-    const target = folderId ? folders.find((f) => f.id === folderId)?.name : 'No Folder';
-    addToast(`Moved to ${target || 'No Folder'}`, 'success');
-  };
-
   const handleDelete = (t: Task) => {
     if (confirm(`Delete "${t.title}"?`)) { deleteTask(t.id); addToast('Task deleted', 'info'); }
-  };
-
-  const handleFolderSave = () => {
-    if (!folderDraftName.trim()) { addToast('Folder name is required', 'error'); return; }
-    if (editingFolder) {
-      renameFolder(editingFolder.id, folderDraftName.trim());
-      addToast('Folder renamed', 'success');
-    } else {
-      addFolder(folderDraftName.trim());
-      addToast('Folder created', 'success');
-    }
-    setFolderModalOpen(false);
-    setFolderDraftName('');
-    setEditingFolder(null);
-  };
-
-  const openNewFolder = () => {
-    setEditingFolder(null);
-    setFolderDraftName('');
-    setFolderModalOpen(true);
   };
 
   return (
@@ -159,8 +149,7 @@ export function Tasks() {
                 trigger={<button type="button" className="p-1.5 rounded text-cova-textSecondary hover:bg-cova-surface hover:text-cova-text transition-colors" aria-label="More actions"><MoreVertical className="w-4 h-4" /></button>}
                 items={[
                   { label: 'Edit', icon: <Pencil className="w-3.5 h-3.5" />, onClick: () => openEdit(t) },
-                  { label: t.folderId ? 'Unassign folder' : 'Assign folder', icon: <CheckSquare className="w-3.5 h-3.5" />, onClick: () => handleMoveToFolder(t, t.folderId ? undefined : folders[0]?.id) },
-                  ...folders.filter((f) => f.id !== t.folderId).slice(0, 4).map((f) => ({ label: 'Move to ' + f.name, onClick: () => handleMoveToFolder(t, f.id) })),
+                  { label: t.folderId ? 'Move to folder' : 'Assign folder', icon: <CheckSquare className="w-3.5 h-3.5" />, onClick: () => { setMovingTaskId(t.id); openModal(t.folderId); } },
                   { label: 'Delete', icon: <Trash2 className="w-3.5 h-3.5" />, onClick: () => handleDelete(t), danger: true },
                 ]}
               />
@@ -201,17 +190,19 @@ export function Tasks() {
                 <option key={f.id} value={f.id}>{f.name}</option>
               ))}
             </select>
-            <button type="button" onClick={openNewFolder} className="mt-2 text-xs text-cova-primary hover:text-cova-primaryHover transition-colors">+ New folder</button>
           </div>
         </div>
       </Modal>
 
-      <Modal isOpen={folderModalOpen} onClose={() => { setFolderModalOpen(false); setFolderDraftName(''); setEditingFolder(null); }} title={editingFolder ? "Rename folder" : "New folder"} footer={<><Button variant="secondary" onClick={() => { setFolderModalOpen(false); setFolderDraftName(''); setEditingFolder(null); }}>Cancel</Button><Button variant="primary" onClick={handleFolderSave}>{editingFolder ? "Save" : "Create"}</Button></>}>
-        <div>
-          <Label htmlFor="folder-name" required>Folder name</Label>
-          <Input id="folder-name" value={folderDraftName} onChange={(e) => setFolderDraftName(e.target.value)} placeholder="e.g. Work tasks" autoFocus />
-        </div>
-      </Modal>
+      <MoveToFolderModal
+        isOpen={isMoveModalOpen}
+        onClose={closeModal}
+        folders={folders}
+        currentFolderId={movingTask?.folderId}
+        onMove={handleMove}
+        onCreateFolder={() => navigate('/folders')}
+        itemName={movingTask?.title || ''}
+      />
     </div>
   );
 }
