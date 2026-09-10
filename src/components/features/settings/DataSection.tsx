@@ -3,6 +3,7 @@ import { Button } from '@components/ui/Button';
 import { useCredentialStore, useSettingsStore, useNoteStore, useUIStore, useActivityStore, useTaskStore, useWalletStore, useSavingsStore } from '@store';
 import { setVaultKey } from '@lib/crypto/vaultStorage';
 import { exportEncryptedBackup, importEncryptedBackup } from '@lib/crypto/backup';
+import { purgeVaultData } from '@lib/crypto/vaultStorage';
 
 export function DataSection() {
   const { credentials } = useCredentialStore();
@@ -84,6 +85,7 @@ export function DataSection() {
   const handleDeleteAll = () => {
     if (confirm('Delete ALL data? This cannot be undone.')) {
       setVaultKey(null);
+      purgeVaultData();
       useCredentialStore.getState().credentials = [];
       useCredentialStore.getState().folders = [];
       useNoteStore.getState().notes = [];
@@ -103,7 +105,6 @@ export function DataSection() {
         avatarInitial: 'CU',
         createdAt: new Date().toISOString(),
       };
-      localStorage.clear();
       window.location.reload();
     }
   };

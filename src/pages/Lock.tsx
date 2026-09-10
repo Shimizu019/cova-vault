@@ -3,7 +3,7 @@ import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { useUIStore, useSettingsStore } from '@store';
 import { useNavigate } from 'react-router-dom';
 import { isFirstTime, verify, clearMasterPassword, onMasterPasswordChange } from '@lib/auth/authStorage';
-import { deriveKey, setVaultKey, getOrCreateVaultSalt } from '@lib/crypto/vaultStorage';
+import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData } from '@lib/crypto/vaultStorage';
 import CovaLogo from '@/assets/image/CovaLogo.png';
 
 const PASSWORD_INPUT_ID = 'cova-lock-password';
@@ -148,22 +148,7 @@ export function Lock() {
 
     clearMasterPassword();
     setVaultKey(null);
-
-    const storeKeys = [
-      'cova:vault-salt',
-      'cova-credential-store',
-      'cova-note-store',
-      'cova-task-store',
-      'cova-wallet-store',
-      'cova-savings-store',
-      'cova-activity-store',
-      'cova-settings-store',
-      'cova-ui-store',
-    ];
-    for (const key of storeKeys) {
-      localStorage.removeItem(key);
-    }
-
+    purgeVaultData();
     setShowChangemeHint(true);
     setAuthError(null);
     setPasswordError(null);

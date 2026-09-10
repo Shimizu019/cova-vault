@@ -113,7 +113,7 @@ export const vaultStorage: VaultStorageEngine = {
     try {
       return await decryptPayload(raw);
     } catch {
-      return raw;
+      return null;
     }
   },
 
@@ -134,6 +134,23 @@ export const vaultStorage: VaultStorageEngine = {
     return () => window.removeEventListener('storage', handler);
   },
 };
+
+export function purgeVaultData() {
+  const keys = [
+    'cova:vault-salt',
+    'cova-credential-store',
+    'cova-note-store',
+    'cova-task-store',
+    'cova-wallet-store',
+    'cova-savings-store',
+    'cova-activity-store',
+    'cova-settings-store',
+    'cova-ui-store',
+  ];
+  for (const key of keys) {
+    localStorage.removeItem(key);
+  }
+}
 
 export async function reencryptVault(oldKey: CryptoKey, newPassword: string): Promise<CryptoKey> {
   const { key: newKey, salt: newSalt } = await deriveKey(newPassword);
