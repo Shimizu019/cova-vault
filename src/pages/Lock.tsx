@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
-import { useUIStore, useSettingsStore, useCredentialStore, useNoteStore, useTaskStore, useWalletStore, useSavingsStore, useActivityStore } from '@store';
-import { useNavigate } from 'react-router-dom';
+import { useUIStore, useSettingsStore } from '@store';
 import { isFirstTime, verify, clearMasterPassword, onMasterPasswordChange } from '@lib/auth/authStorage';
-import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData, vaultStorage } from '@lib/crypto/vaultStorage';
+import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData } from '@lib/crypto/vaultStorage';
 import CovaLogo from '@/assets/image/CovaLogo.png';
 
 const PASSWORD_INPUT_ID = 'cova-lock-password';
@@ -22,7 +21,6 @@ export function Lock() {
 
   const { addToast } = useUIStore();
   const { updateSettings } = useSettingsStore();
-  const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [firstTime, setFirstTime] = useState(isFirstTime());
@@ -116,8 +114,9 @@ export function Lock() {
         setVaultKey(key);
         updateSettings({ lastUnlockedAt: new Date().toISOString() });
         addToast('First-time access — please set a new password', 'info');
+        sessionStorage.setItem('cova:unlock-password', submitted);
         setTimeout(() => {
-          navigate('/settings#security');
+          window.location.reload();
         }, 50);
       } catch {
         setAuthError('Could not unlock vault');
@@ -136,36 +135,10 @@ export function Lock() {
       return;
     }
 
-    // 6. Force encrypted stores to re-hydrate from localStorage now that
-    //    the vault key is available. They were initialized while locked,
-    //    so their in-memory state is still empty.
-    const storeKeys: Record<string, any> = {
-      'cova-credential-store': useCredentialStore,
-      'cova-note-store': useNoteStore,
-      'cova-task-store': useTaskStore,
-      'cova-wallet-store': useWalletStore,
-      'cova-savings-store': useSavingsStore,
-      'cova-activity-store': useActivityStore,
-      'cova-settings-store': useSettingsStore,
-      'cova-ui-store': useUIStore,
-    };
-
-    for (const [key, store] of Object.entries(storeKeys)) {
-      try {
-        const decrypted = await vaultStorage.getItem(key);
-        if (!decrypted) continue;
-        const parsed = JSON.parse(decrypted);
-        if (parsed && typeof parsed === 'object') {
-          store.setState(parsed.state ?? parsed);
-        }
-      } catch {
-        // skip corrupted store entries
-      }
-    }
-
-    // 7. Returning user with a correct password → vault.
+    // 6. Returning user with a correct password → vault.
     setShowChangemeHint(false);
-    navigate('/dashboard');
+    sessionStorage.setItem('cova:unlock-password', submitted);
+    window.location.reload();
   };
 
   const handleForgotPassword = () => {
