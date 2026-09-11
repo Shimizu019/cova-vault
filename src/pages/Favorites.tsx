@@ -1,21 +1,15 @@
 ﻿import { useState } from 'react';
-import { Star, Search, Key, ExternalLink, Eye, EyeOff, Copy, Pencil, Trash2 } from 'lucide-react';
-import { Button } from '@components/ui/Button';
-import { Input } from '@components/ui/Input';
-import { Modal } from '@components/ui/Modal';
+import { Star, Search, Key, ExternalLink, Eye, EyeOff, Copy } from 'lucide-react';
 import { Dropdown } from '@components/ui/Dropdown';
 import { EmptyState } from '@components/ui/Card';
 import { useCredentialStore, useUIStore } from '@store';
 import { maskPassword, getDomainFromUrl } from '@lib/utils';
 import { secureCopy } from '@lib/utils/clipboard';
-import type { Credential } from '@lib/types';
 
 export function Favorites() {
   const { credentials, toggleFavorite, deleteCredential } = useCredentialStore();
   const { passwordVisibility, togglePasswordVisibility, addToast } = useUIStore();
   const [search, setSearch] = useState('');
-  const [editing, setEditing] = useState<Credential | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const favs = credentials.filter((c) => c.favorite);
   const q = search.toLowerCase();

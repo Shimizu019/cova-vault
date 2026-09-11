@@ -1,4 +1,3 @@
-import type { ComponentType } from 'react';
 import { cn } from '@lib/utils';
 import { formatRelativeTime } from '@lib/utils';
 import type { ItemStatus } from '@lib/types';

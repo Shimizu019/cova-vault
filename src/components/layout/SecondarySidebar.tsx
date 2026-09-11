@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@lib/utils';
-import { User, Palette, Globe, Shield, Database } from 'lucide-react';
+import { User, Shield, Database } from 'lucide-react';
 
 interface SettingsItem {
   id: string;

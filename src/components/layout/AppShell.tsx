@@ -14,7 +14,7 @@ export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const { sidebarCollapsed, toggleSidebar, toasts, removeToast, searchQuery, setSearchQuery } = useUIStore();
-  const { user, updateUser } = useSettingsStore();
+  const { user } = useSettingsStore();
   const [settingsNavOpen, setSettingsNavOpen] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);

@@ -8,8 +8,8 @@ import { formatPHP } from '@lib/utils';
 export function Dashboard() {
   const { credentials } = useCredentialStore();
   const { notes } = useNoteStore();
-  const { tasks, getOpenTasks } = useTaskStore();
-  const { records, getBalance } = useWalletStore();
+  const { getOpenTasks } = useTaskStore();
+  const { getBalance } = useWalletStore();
   const { user } = useSettingsStore();
   const { activities } = useActivityStore();
 

@@ -1,7 +1,7 @@
 ﻿import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { ToastMessage } from '../types';
 import { generateId } from '../utils';
-import { encryptedPersist } from '../crypto/encryptedStorage';
 
 interface UIState {
   sidebarCollapsed: boolean;
@@ -17,7 +17,7 @@ interface UIState {
 }
 
 export const useUIStore = create<UIState>()(
-  encryptedPersist(
+  persist(
     (set) => ({
       sidebarCollapsed: false,
       searchQuery: '',
@@ -45,6 +45,9 @@ export const useUIStore = create<UIState>()(
           passwordVisibility: { ...s.passwordVisibility, [id]: !s.passwordVisibility[id] },
         })),
     }),
-    { name: 'cova-ui-store' }
+    {
+      name: 'cova-ui-store',
+      storage: createJSONStorage(() => localStorage),
+    }
   )
 );

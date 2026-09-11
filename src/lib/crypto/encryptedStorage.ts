@@ -15,7 +15,7 @@ export function encryptedPersist<T>(
         setItem: (name: string, value: string) => vaultStorage.setItem(name, value),
         removeItem: (name: string) => vaultStorage.removeItem(name),
       })),
-      partialize: options.partialize as ((state: T) => T) | undefined,
+      partialize: (options.partialize ?? ((state) => state)) as (state: T) => T,
     }
   );
 }

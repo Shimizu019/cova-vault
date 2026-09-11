@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
-import { useUIStore, useSettingsStore } from '@store';
+import { useUIStore, useSettingsStore, useCredentialStore, useNoteStore, useTaskStore, useWalletStore, useSavingsStore, useActivityStore } from '@store';
 import { useNavigate } from 'react-router-dom';
 import { isFirstTime, verify, clearMasterPassword, onMasterPasswordChange } from '@lib/auth/authStorage';
 import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData } from '@lib/crypto/vaultStorage';
-import CovaLogo from '@/assets/image/CovaLogo.png';
+import CovaLogo from '../assets/image/CovaLogo.png';
 
 const PASSWORD_INPUT_ID = 'cova-lock-password';
 const PASSWORD_ERROR_ID = 'cova-lock-password-error';
@@ -13,7 +13,7 @@ const PASSWORD_ERROR_ID = 'cova-lock-password-error';
 // flash so fast that the user can't tell anything happened.
 const MIN_LOADING_MS = 350;
 
-export function Lock() {
+export function Lock(): React.ReactElement {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -22,14 +22,11 @@ export function Lock() {
 
   const { addToast } = useUIStore();
   const { updateSettings } = useSettingsStore();
+  const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [firstTime, setFirstTime] = useState(isFirstTime());
-  const [showChangemeHint, setShowChangemeHint] = useState<boolean>(firstTime);
-
-  useEffect(() => {
-    setShowChangemeHint(firstTime);
-  }, [firstTime]);
+  const showChangemeHint = firstTime;
 
   // React to password changes in other tabs/windows so the Lock screen
   // updates immediately without requiring a manual refresh.
@@ -142,8 +139,9 @@ export function Lock() {
     useActivityStore.setState({ activities: [] });
 
     // 7. Returning user with a correct password → vault.
-    setShowChangemeHint(false);
+    setFirstTime(false);
     navigate('/dashboard');
+  };
 
   const handleForgotPassword = () => {
     const ok = window.confirm(
@@ -158,7 +156,6 @@ export function Lock() {
     setVaultKey(null);
     purgeVaultData();
     setFirstTime(true);
-    setShowChangemeHint(true);
     setAuthError(null);
     setPasswordError(null);
     setPassword('');
@@ -322,7 +319,7 @@ export function Lock() {
               </div>
             </form>
           </div>
-        </div>
+</div>
       </main>
 
       {/* Persistent terminal-style status footer. Gradient frame above matches CTA. */}
@@ -339,9 +336,9 @@ export function Lock() {
           </p>
           <p className="mt-1.5 text-[10px] sm:text-[11px] cova-mono uppercase tracking-[0.18em] text-cova-textMuted/70">
             Hand-coded for privacy
-          </p>
+</p>
         </div>
       </footer>
     </div>
-  );
+);
 }

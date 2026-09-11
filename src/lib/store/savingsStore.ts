@@ -15,7 +15,7 @@ interface SavingsStoreState {
 const pushActivity = (activity: Omit<ActivityItem, "id" | "timestamp">) => {
   try {
     useActivityStore.getState().addActivity(activity);
-  } catch (e) {
+  } catch {
     // silently fail if store is not yet initialized
   }
 };

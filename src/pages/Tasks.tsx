@@ -9,7 +9,7 @@ import { MoveToFolderModal } from '@components/ui/MoveToFolderModal';
 import { useTaskStore, useCredentialStore, useUIStore } from '@store';
 import { useMoveToFolder } from '@hooks/useMoveToFolder';
 import { useNavigate } from 'react-router-dom';
-import type { Task, Folder } from '@lib/types';
+import type { Task } from '@lib/types';
 import { formatDate } from '@lib/utils';
 
 const STATUS_LABELS = { todo: 'To Do', in_progress: 'In Progress', done: 'Done' };

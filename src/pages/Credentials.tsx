@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import {
-  Key, Search, Plus, Star, MoreVertical, Eye, EyeOff,
-  Copy, ExternalLink, Pencil, Trash2, Globe, Filter,
+  Key, Search, Plus, Globe, Filter,
 } from 'lucide-react';
 import lockLogo from '../assets/image/lockLogo.png';
 import { Button } from '@components/ui/Button';
@@ -10,7 +9,6 @@ import { EmptyState } from '@components/ui/Card';
 import { useCredentialStore, useUIStore } from '@store';
 import { CredentialModal } from '@features/credentials/CredentialModal';
 import { CredentialRow } from '@features/credentials/CredentialRow';
-import { maskPassword } from '@lib/utils';
 import { secureCopy } from '@lib/utils/clipboard';
 import type { Credential } from '@lib/types';
 

@@ -1,5 +1,4 @@
 ﻿import { Globe } from 'lucide-react';
-import { Label } from '@components/ui/Input';
 import { useSettingsStore } from '@store';
 import type { Language } from '@lib/types';
 

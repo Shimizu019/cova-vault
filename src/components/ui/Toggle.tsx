@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { cn } from '@lib/utils';
 
 interface ToggleProps {
@@ -10,7 +11,8 @@ interface ToggleProps {
 }
 
 export function Toggle({ checked, onChange, label, description, disabled, id }: ToggleProps) {
-  const inputId = id || `toggle-${Math.random().toString(36).slice(2, 9)}`;
+  const generatedId = useId();
+  const inputId = id || generatedId;
 
   return (
     <div className="flex items-center justify-between gap-3">

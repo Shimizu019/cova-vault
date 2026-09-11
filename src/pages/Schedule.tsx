@@ -1,6 +1,5 @@
 ﻿import { useState, useMemo, Fragment } from 'react';
-import { Clock, ChevronLeft, ChevronRight, CheckSquare } from 'lucide-react';
-import { EmptyState } from '@components/ui/Card';
+import { Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTaskStore } from '@store';
 import { formatDate, toLocalDateString } from '@lib/utils';
 

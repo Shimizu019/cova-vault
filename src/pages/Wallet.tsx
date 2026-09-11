@@ -6,7 +6,7 @@ import { Modal } from '@components/ui/Modal';
 import { EmptyState } from '@components/ui/Card';
 import { useWalletStore, useUIStore } from '@store';
 import { formatPHP, formatDate, generateId } from '@lib/utils';
-import type { WalletRecord, Budget } from '@lib/types';
+import type { WalletRecord } from '@lib/types';
 
 const EXPENSE_CATS = ['Food', 'Transportation', 'School', 'Bills', 'Shopping', 'Entertainment', 'Health', 'Other'];
 const INCOME_CATS = ['Salary', 'Allowance', 'Gift', 'Refund', 'Freelance', 'Other'];
@@ -16,7 +16,7 @@ export function Wallet() {
     records, startingBalance, budgets,
     setStartingBalance, addRecord, updateRecord, deleteRecord,
     getBalance, getMonthlyIncome, getMonthlyExpense, getTodaysExpense,
-    getWeeklyExpense, getSpendingByCategory, setBudget, updateBudget, deleteBudget,
+    getWeeklyExpense, getSpendingByCategory, setBudget, updateBudget,
   } = useWalletStore();
   const { addToast } = useUIStore();
 
@@ -230,7 +230,10 @@ export function Wallet() {
         </div>
       </Modal>
 
-      <Modal isOpen={isDetailOpen} onClose={() => { setIsDetailOpen(false); setSelRecord(null); }} title={selRecord?.description || ''} size="md" footer={<><Button variant="danger" onClick={() => selRecord && doDel(selRecord)}>Delete</Button><Button variant="primary" onClick={() => { setIsDetailOpen(false); selRecord && openEdit(selRecord); }}>Edit</Button></>}>
+      <Modal isOpen={isDetailOpen} onClose={() => { setIsDetailOpen(false); setSelRecord(null); }} title={selRecord?.description || ''} size="md" footer={[
+    <Button key="delete" variant="danger" onClick={() => { if (selRecord) doDel(selRecord); }}>Delete</Button>,
+    <Button key="edit" variant="primary" onClick={() => { setIsDetailOpen(false); if (selRecord) openEdit(selRecord); }}>Edit</Button>
+  ]}>
         {selRecord && (
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-4 bg-cova-surface rounded-lg">
@@ -241,7 +244,12 @@ export function Wallet() {
               <div className="flex justify-between"><span className="text-sm text-cova-textMuted">Category</span><span className="text-sm font-medium text-cova-text">{selRecord.category}</span></div>
               <div className="flex justify-between"><span className="text-sm text-cova-textMuted">Date</span><span className="text-sm font-medium text-cova-text">{formatDate(selRecord.date)}</span></div>
               <div className="flex justify-between"><span className="text-sm text-cova-textMuted">Time</span><span className="text-sm font-medium text-cova-text">{selRecord.time}</span></div>
-              {selRecord.cashGiven !== undefined && selRecord.cashGiven > 0 && <><div className="flex justify-between"><span className="text-sm text-cova-textMuted">Cash Given</span><span className="text-sm font-medium text-cova-text">{formatPHP(selRecord.cashGiven)}</span></div><div className="flex justify-between"><span className="text-sm text-cova-textMuted">Change</span><span className="text-sm font-medium text-cova-text">{formatPHP(selRecord.change || 0)}</span></div></>}
+              {selRecord.cashGiven !== undefined && selRecord.cashGiven > 0 && (
+                <>
+                  <div className="flex justify-between"><span className="text-sm text-cova-textMuted">Cash Given</span><span className="text-sm font-medium text-cova-text">{formatPHP(selRecord.cashGiven)}</span></div>
+                  <div className="flex justify-between"><span className="text-sm text-cova-textMuted">Change</span><span className="text-sm font-medium text-cova-text">{formatPHP(selRecord.change || 0)}</span></div>
+                </>
+              )}
               {selRecord.note && <div className="pt-2 border-t border-cova-border"><p className="text-sm text-cova-textMuted mb-1">Note</p><p className="text-sm text-cova-text">{selRecord.note}</p></div>}
             </div>
           </div>
