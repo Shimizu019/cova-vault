@@ -60,12 +60,13 @@ jobs:
         shell: bash
 
       - name: Build APK
+        id: build
         run: |
           cd android
           chmod +x ./gradlew
           ./gradlew assembleRelease -x lint --no-daemon --stacktrace 2>&1 | tee gradle-build.log || true
           BUILD_EXIT=${PIPESTATUS[0]}
-          echo "BUILD_EXIT_CODE: $BUILD_EXIT"
+          echo "BUILD_EXIT_CODE=$BUILD_EXIT" >> "$GITHUB_OUTPUT"
           echo "=== Searching for all APK files ==="
           find . -name '*.apk' -type f 2>/dev/null || echo "No APK files found"
           if [ "$BUILD_EXIT" -ne 0 ]; then
@@ -73,7 +74,6 @@ jobs:
             tail -50 gradle-build.log
           fi
         shell: bash
-        continue-on-error: true
 
       - name: Save build log
         if: always()
@@ -83,18 +83,24 @@ jobs:
           path: android/gradle-build.log
 
       - name: Set APK path
+        id: find_apk
         if: always()
         run: |
           APK_PATH=$(find android/app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1 || true)
           echo "APK_PATH: '$APK_PATH'"
-          echo "APK_PATH=${APK_PATH:-none}" >> $GITHUB_ENV
+          echo "apk_path=${APK_PATH:-}" >> "$GITHUB_OUTPUT"
+          echo "apk_found=$([ -n "$APK_PATH" ] && echo "true" || echo "false")" >> "$GITHUB_OUTPUT"
         shell: bash
 
       - name: Create GitHub Release
         if: always()
         run: |
           TAG="${{ github.ref_name || inputs.tag }}"
+          BUILD_EXIT="${{ steps.build.outputs.BUILD_EXIT_CODE }}"
+          APK_PATH="${{ steps.find_apk.outputs.apk_path }}"
           echo "=== Releasing tag: $TAG ==="
+          echo "BUILD_EXIT_CODE: $BUILD_EXIT"
+          echo "APK_PATH: '$APK_PATH'"
 
           echo "1. Deleting existing release if it exists..."
           gh release delete "$TAG" --yes 2>&1 || echo "No existing release to delete (expected)"
@@ -118,4 +124,3 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APK_PATH: ${{ env.APK_PATH }}
