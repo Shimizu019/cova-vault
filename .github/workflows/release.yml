@@ -69,8 +69,18 @@ jobs:
           BUILD_EXIT=${PIPESTATUS[0]}
           set -e
           echo "BUILD_EXIT_CODE=$BUILD_EXIT" >> "$GITHUB_OUTPUT"
-          echo "=== Searching for all APK files ==="
-          find . -name '*.apk' -type f 2>/dev/null || echo "No APK files found"
+          echo "=== Searching for ALL apk files in android/ ==="
+          APK_FOUND=$(find . -name '*.apk' -type f 2>/dev/null || true)
+          echo "APK_FILES: '$APK_FOUND'"
+          if [ -n "$APK_FOUND" ]; then
+            echo "::warning::APK found: $APK_FOUND"
+          else
+            echo "::warning::No APK files found anywhere in android/"
+            echo "=== Checking build dirs ==="
+            ls -la app/build/outputs/ 2>/dev/null || echo "No outputs dir"
+            ls -la app/build/outputs/apk/ 2>/dev/null || echo "No apk dir"
+            ls -la app/build/outputs/apk/release/ 2>/dev/null || echo "No release apk dir"
+          fi
           if [ "$BUILD_EXIT" -ne 0 ]; then
             echo "::error::APK BUILD FAILED (exit code $BUILD_EXIT). Last 50 lines:"
             tail -50 gradle-build.log | while IFS= read -r line; do
@@ -91,10 +101,12 @@ jobs:
         if: always()
         run: |
           APK_PATH=$(find android/app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1 || true)
+          if [ -z "$APK_PATH" ]; then
+            APK_PATH=$(find android -name '*.apk' -type f 2>/dev/null | head -1 || true)
+          fi
           echo "APK_PATH: '$APK_PATH'"
           echo "apk_path=${APK_PATH:-}" >> "$GITHUB_OUTPUT"
-          echo "apk_found=$([ -n "$APK_PATH" ] && echo "true" || echo "false")" >> "$GITHUB_OUTPUT"
-          echo "APK_FOUND: $([ -n "$APK_PATH" ] && echo "true" || echo "false")"
+          echo "APK_PATH=$APK_PATH"
         shell: bash
 
       - name: Create GitHub Release
