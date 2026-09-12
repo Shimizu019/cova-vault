@@ -103,11 +103,11 @@ export function AppShell() {
         <header className="flex-shrink-0 bg-cova-bg border-b border-cova-border px-3 sm:px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-2 sm:gap-3">
           <button
             type="button"
-            onClick={() => {
-              if (showSecondarySidebar) {
-                setSettingsNavOpen((open) => !open);
-              } else if (isMobile) {
+             onClick={() => {
+              if (isMobile) {
                 setMobileNavOpen(true);
+              } else if (showSecondarySidebar) {
+                setSettingsNavOpen((open) => !open);
               } else {
                 toggleSidebar();
               }

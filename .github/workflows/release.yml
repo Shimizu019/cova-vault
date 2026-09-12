@@ -112,7 +112,8 @@ jobs:
           echo "4. Uploading APK (if exists)..."
           if [ -n "${APK_PATH:-}" ] && [ -f "$APK_PATH" ]; then
             echo "   APK found: $APK_PATH"
-            gh release upload "$TAG" "$APK_PATH" --clobber 2>&1
+            cp "$APK_PATH" "app-covaVault.apk"
+            gh release upload "$TAG" "app-covaVault.apk" --clobber 2>&1
           else
             echo "   No APK to upload (expected if build failed)"
           fi
