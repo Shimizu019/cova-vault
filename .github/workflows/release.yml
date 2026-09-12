@@ -23,7 +23,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
 
       - run: npm ci
       - run: npm run build
@@ -34,7 +33,7 @@ jobs:
           zip -r ../cova-vault.zip .
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -47,11 +46,15 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
           echo "y" | $ANDROID_HOME/cmdline-tools/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0" 2>&1
-        shell: bash
+          echo "SDK packages installed"
 
       - name: Sync Capacitor
-        run: npx cap sync android
-        shell: bash
+        run: |
+          which node
+          which npm
+          ls -la node_modules/.bin/cap
+          ./node_modules/.bin/cap sync android
+          echo "Cap sync completed"
 
       - name: Build APK
         run: |
