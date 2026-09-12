@@ -2,6 +2,7 @@
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { ToastMessage } from '../types';
 import { generateId } from '../utils';
+import { getStorage } from '../storage/storage';
 
 interface UIState {
   sidebarCollapsed: boolean;
@@ -47,7 +48,7 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: 'cova-ui-store',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => getStorage()),
     }
   )
 );

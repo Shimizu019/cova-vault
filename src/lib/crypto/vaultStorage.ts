@@ -1,4 +1,7 @@
 import { deriveKey } from './vaultCrypto';
+import { getStorage } from '../storage/storage';
+
+const storage = getStorage();
 
 type Listener = () => void;
 
@@ -25,7 +28,7 @@ export function isVaultUnlocked(): boolean {
 }
 
 export async function getOrCreateVaultSalt(): Promise<Uint8Array> {
-  const existing = localStorage.getItem(VAULT_SALT_KEY);
+  const existing = storage.getItem(VAULT_SALT_KEY);
   if (existing) {
     const decoded = atob(existing);
     const bytes = new Uint8Array(decoded.length);
@@ -36,12 +39,12 @@ export async function getOrCreateVaultSalt(): Promise<Uint8Array> {
   }
 
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  localStorage.setItem(VAULT_SALT_KEY, btoa(String.fromCharCode(...salt)));
+  storage.setItem(VAULT_SALT_KEY, btoa(String.fromCharCode(...salt)));
   return salt;
 }
 
 export async function setVaultSalt(salt: Uint8Array): Promise<void> {
-  localStorage.setItem(VAULT_SALT_KEY, btoa(String.fromCharCode(...salt)));
+  storage.setItem(VAULT_SALT_KEY, btoa(String.fromCharCode(...salt)));
 }
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -108,7 +111,7 @@ export const vaultStorage: VaultStorageEngine = {
     if (!vaultKey) {
       return null;
     }
-    const raw = localStorage.getItem(key);
+    const raw = storage.getItem(key);
     if (!raw) return null;
     try {
       return await decryptPayload(raw);
@@ -119,11 +122,11 @@ export const vaultStorage: VaultStorageEngine = {
 
   async setItem(key, value) {
     const encrypted = await encryptPayload(value);
-    localStorage.setItem(key, encrypted);
+    storage.setItem(key, encrypted);
   },
 
   async removeItem(key) {
-    localStorage.removeItem(key);
+    storage.removeItem(key);
   },
 
   subscribe(key, listener) {
@@ -148,7 +151,7 @@ export function purgeVaultData() {
     'cova-ui-store',
   ];
   for (const key of keys) {
-    localStorage.removeItem(key);
+    storage.removeItem(key);
   }
 }
 
@@ -168,7 +171,7 @@ export async function reencryptVault(oldKey: CryptoKey, newPassword: string): Pr
   ];
 
   for (const storeKey of storeKeys) {
-    const raw = localStorage.getItem(storeKey);
+    const raw = storage.getItem(storeKey);
     if (!raw) continue;
     
     let plaintext: string;
@@ -198,7 +201,7 @@ export async function reencryptVault(oldKey: CryptoKey, newPassword: string): Pr
       iv: arrayBufferToBase64(newIv.buffer as ArrayBuffer),
       data: arrayBufferToBase64(newCiphertext),
     };
-    localStorage.setItem(storeKey, JSON.stringify(newPayload));
+     storage.setItem(storeKey, JSON.stringify(newPayload));
   }
 
   return newKey;

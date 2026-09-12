@@ -129,7 +129,7 @@ export function Lock(): React.ReactElement {
       return;
     }
 
-    // 6. Clear in-memory store state so they can rehydrate from localStorage
+    // 6. Clear in-memory store state so they can rehydrate from secure storage
     //    now that the vault key is available.
     useCredentialStore.setState({ credentials: [], folders: [] });
     useNoteStore.setState({ notes: [], folders: [] });

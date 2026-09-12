@@ -1,13 +1,6 @@
-// Client-side master password storage for the Cova vault.
-//
-// Threat model: this app is a local-only vault. The "attacker" we protect
-// against is someone reading the raw localStorage JSON in DevTools, not
-// someone with the device. We therefore never store the password in plain
-// text — we store a SHA-256 digest.
-//
-// We do NOT claim this is sufficient against a determined attacker with
-// file-system or memory access. The CHANGEME onboarding copy makes this
-// honest: it's a convenience unlock, not a security boundary.
+import { getStorage } from '../storage/storage';
+
+const storage = getStorage();
 
 const STORAGE_KEY = 'cova:master-password-hash';
 const LEGACY_FIRST_RUN_KEY = 'cova:master-password-initialized';
@@ -23,7 +16,7 @@ async function sha256(input: string): Promise<string> {
 /** Returns true if the user has already set a real master password
  *  (i.e. they have used CHANGEME and chosen a new one in Settings). */
 export function isInitialized(): boolean {
-  return !!localStorage.getItem(STORAGE_KEY);
+   return !!storage.getItem(STORAGE_KEY);
 }
 
 /** Returns true if the user has not yet set a real master password.
@@ -47,7 +40,7 @@ const FIRST_TIME_PASSWORD = 'CHANGEME';
 export async function verify(candidate: string): Promise<boolean> {
   if (!candidate) return false;
 
-  const stored = localStorage.getItem(STORAGE_KEY);
+  const stored = storage.getItem(STORAGE_KEY);
 
   // No stored hash → first run. CHANGEME is the only accepted value.
   if (!stored) {
@@ -69,17 +62,17 @@ export async function verify(candidate: string): Promise<boolean> {
 /** Persist a new master password. Overwrites any previous value. */
 export async function setMasterPassword(newPassword: string): Promise<void> {
   const hash = await sha256(newPassword);
-  localStorage.setItem(STORAGE_KEY, hash);
-  // Mark that we've been initialized so the CHANGEME card can hide itself.
-  localStorage.setItem(LEGACY_FIRST_RUN_KEY, '1');
+   storage.setItem(STORAGE_KEY, hash);
+   // Mark that we've been initialized so the CHANGEME card can hide itself.
+   storage.setItem(LEGACY_FIRST_RUN_KEY, '1');
 }
 
 /** Forget the master password. Used by the "Forgot password?" flow.
  *  After clearing, the next unlock must use `CHANGEME` (first-run
  *  state is restored). */
 export function clearMasterPassword(): void {
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(LEGACY_FIRST_RUN_KEY);
+  storage.removeItem(STORAGE_KEY);
+  storage.removeItem(LEGACY_FIRST_RUN_KEY);
 }
 
 /** Listen for changes to the master-password hash in other tabs/windows.
