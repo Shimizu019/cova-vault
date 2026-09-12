@@ -39,7 +39,7 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Download JAXB for Java 17 compatibility
+      - name: Download JAXB for Java 11+ compatibility
         run: |
           mkdir -p ~/.jaxb
           curl -sL -o ~/.jaxb/jaxb-api.jar https://repo1.maven.org/maven2/javax/xml/bind/jaxb-api/2.3.1/jaxb-api-2.3.1.jar
@@ -53,43 +53,26 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools build-tools;35.0.0 platforms;android-35'
+          packages: 'platform-tools build-tools;36.0.0 platforms;android-36'
 
       - name: Sync Capacitor
         run: npx cap sync android
         shell: bash
 
       - name: Build APK
-        id: build
+        id: build_apk
         run: |
           cd android
           chmod +x ./gradlew
-          set +e
           ./gradlew assembleRelease -x lint --no-daemon --stacktrace 2>&1 | tee gradle-build.log
           BUILD_EXIT=${PIPESTATUS[0]}
-          set -e
-          echo "BUILD_EXIT_CODE=$BUILD_EXIT" >> "$GITHUB_OUTPUT"
-          echo "=== Searching for ALL apk files in android/ ==="
-          APK_FOUND=$(find . -name '*.apk' -type f 2>/dev/null || true)
-          echo "APK_FILES: '$APK_FOUND'"
-          if [ -n "$APK_FOUND" ]; then
-            echo "::warning::APK found: $APK_FOUND"
-          else
-            echo "::warning::No APK files found anywhere in android/"
-            echo "=== Checking build dirs ==="
-            ls -la app/build/outputs/ 2>/dev/null || echo "No outputs dir"
-            ls -la app/build/outputs/apk/ 2>/dev/null || echo "No apk dir"
-            ls -la app/build/outputs/apk/release/ 2>/dev/null || echo "No release apk dir"
-          fi
-          if [ "$BUILD_EXIT" -ne 0 ]; then
-            echo "::error::APK BUILD FAILED (exit code $BUILD_EXIT). Last 50 lines:"
-            tail -50 gradle-build.log | while IFS= read -r line; do
-              echo "::error::gradle: $line"
-            done
-          fi
+          echo "build_exit_code=$BUILD_EXIT" >> "$GITHUB_OUTPUT"
+          echo "=== APK files ==="
+          find . -name '*.apk' -type f 2>/dev/null || echo "No APK files found"
         shell: bash
+        continue-on-error: true
 
-      - name: Save build log
+      - name: Save build log artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -104,16 +87,14 @@ jobs:
           if [ -z "$APK_PATH" ]; then
             APK_PATH=$(find android -name '*.apk' -type f 2>/dev/null | head -1 || true)
           fi
-          echo "APK_PATH: '$APK_PATH'"
           echo "apk_path=${APK_PATH:-}" >> "$GITHUB_OUTPUT"
-          echo "APK_PATH=$APK_PATH"
         shell: bash
 
       - name: Create GitHub Release
         if: always()
         run: |
           TAG="${{ github.ref_name || inputs.tag }}"
-          BUILD_EXIT="${{ steps.build.outputs.BUILD_EXIT_CODE }}"
+          BUILD_EXIT="${{ steps.build_apk.outputs.build_exit_code }}"
           APK_PATH="${{ steps.find_apk.outputs.apk_path }}"
           echo "=== Releasing tag: $TAG ==="
           echo "BUILD_EXIT_CODE: $BUILD_EXIT"
