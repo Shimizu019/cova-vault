@@ -64,7 +64,7 @@ jobs:
         run: |
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleRelease -x lint --no-daemon --stacktrace 2>&1 | tee gradle-build.log
+          ./gradlew assembleDebug -x lint --no-daemon --stacktrace 2>&1 | tee gradle-build.log
           BUILD_EXIT=${PIPESTATUS[0]}
           echo "build_exit_code=$BUILD_EXIT" >> "$GITHUB_OUTPUT"
           echo "=== APK files ==="
@@ -83,7 +83,7 @@ jobs:
         id: find_apk
         if: always()
         run: |
-          APK_PATH=$(find android/app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1 || true)
+          APK_PATH=$(find android/app/build/outputs/apk/debug -name '*.apk' 2>/dev/null | head -1 || true)
           if [ -z "$APK_PATH" ]; then
             APK_PATH=$(find android -name '*.apk' -type f 2>/dev/null | head -1 || true)
           fi
