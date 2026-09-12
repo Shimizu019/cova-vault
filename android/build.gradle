@@ -8,6 +8,8 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.0'
+        classpath 'javax.xml.bind:jaxb-api:2.3.1'
+        classpath 'org.glassfish.jaxb:jaxb-runtime:2.3.1'
     }
 }
 
