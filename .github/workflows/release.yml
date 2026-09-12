@@ -13,6 +13,8 @@ on:
 
 permissions:
   contents: write
+env:
+  JAVA_TOOL_OPTIONS: "-Xbootclasspath/a:/home/runner/.jaxb/jaxb-api.jar:/home/runner/.jaxb/jaxb-runtime.jar:/home/runner/.jaxb/jaxb-core.jar"
 
 jobs:
   build:
@@ -48,43 +50,21 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        env:
-          GRADLE_OPTS: "-Djava.class.path=${{ github.workspace }}/.jaxb/jaxb-api.jar:${{ github.workspace }}/.jaxb/jaxb-runtime.jar:${{ github.workspace }}/.jaxb/jaxb-core.jar"
-
-      - name: Install Android SDK packages
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          SDKMGR=$(find $ANDROID_HOME -name "sdkmanager" -type f 2>/dev/null | head -1)
-          echo "SDKMGR=$SDKMGR"
-          if [ -n "$SDKMGR" ]; then
-            echo "y" | "$SDKMGR" "platforms;android-35" "build-tools;35.0.0" 2>&1
-          else
-            echo "ERROR: sdkmanager not found"
-            exit 1
-          fi
-        shell: bash
-        env:
-          GRADLE_OPTS: "-Djava.class.path=/home/runner/.jaxb/jaxb-api.jar:/home/runner/.jaxb/jaxb-runtime.jar:/home/runner/.jaxb/jaxb-core.jar"
+        with:
+          packages: 'platform-tools build-tools;35.0.0 platforms;android-35'
 
       - name: Sync Capacitor
-        run: npm exec cap sync android
-        shell: bash
-        env:
-          CLASSPATH: "/home/runner/.jaxb/jaxb-api.jar:/home/runner/.jaxb/jaxb-runtime.jar:/home/runner/.jaxb/jaxb-core.jar"
-          GRADLE_OPTS: "-Djava.class.path=/home/runner/.jaxb/jaxb-api.jar:/home/runner/.jaxb/jaxb-runtime.jar:/home/runner/.jaxb/jaxb-core.jar"
+        run: npx cap sync android
 
       - name: Build APK
         run: |
           cd android
           chmod +x ./gradlew
           ./gradlew assembleRelease -x lint --no-daemon
-          find app/build/outputs/apk/release -name '*.apk' -print
           APK_PATH=$(find app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1)
+          echo "APK found at: $APK_PATH"
           echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
         shell: bash
-        env:
-          CLASSPATH: "/home/runner/.jaxb/jaxb-api.jar:/home/runner/.jaxb/jaxb-runtime.jar:/home/runner/.jaxb/jaxb-core.jar"
-          GRADLE_OPTS: "-Djava.class.path=/home/runner/.jaxb/jaxb-api.jar:/home/runner/.jaxb/jaxb-runtime.jar:/home/runner/.jaxb/jaxb-core.jar"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
