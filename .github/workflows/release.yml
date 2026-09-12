@@ -14,7 +14,7 @@ on:
 permissions:
   contents: write
 env:
-  JAVA_TOOL_OPTIONS: "-Xbootclasspath/a:/home/runner/.jaxb/jaxb-api.jar:/home/runner/.jaxb/jaxb-runtime.jar:/home/runner/.jaxb/jaxb-core.jar"
+  JAVA_TOOL_OPTIONS: "-Xbootclasspath/a:/home/runner/.jaxb/jaxb-api.jar:/home/runner/.jaxb/jaxb-runtime.jar:/home/runner/.jaxb/jaxb-core.jar:/home/runner/.jaxb/istack-commons-runtime.jar:/home/runner/.jaxb/javax.activation.jar"
 
 jobs:
   build:
@@ -45,6 +45,8 @@ jobs:
           curl -sL -o ~/.jaxb/jaxb-api.jar https://repo1.maven.org/maven2/javax/xml/bind/jaxb-api/2.3.1/jaxb-api-2.3.1.jar
           curl -sL -o ~/.jaxb/jaxb-runtime.jar https://repo1.maven.org/maven2/org/glassfish/jaxb/jaxb-runtime/2.3.1/jaxb-runtime-2.3.1.jar
           curl -sL -o ~/.jaxb/jaxb-core.jar https://repo1.maven.org/maven2/org/glassfish/jaxb/jaxb-core/2.3.0.1/jaxb-core-2.3.0.1.jar
+          curl -sL -o ~/.jaxb/istack-commons-runtime.jar https://repo1.maven.org/maven2/com/sun/istack/istack-commons-runtime/3.0.1/istack-commons-runtime-3.0.1.jar
+          curl -sL -o ~/.jaxb/javax.activation.jar https://repo1.maven.org/maven2/com/sun/activation/javax.activation/1.2.0/javax.activation-1.2.0.jar
           echo "JAXB downloaded: $(ls -la ~/.jaxb/)"
         shell: bash
 
