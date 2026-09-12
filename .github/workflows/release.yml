@@ -15,6 +15,7 @@ permissions:
   contents: write
 env:
   JAVA_TOOL_OPTIONS: "-Xbootclasspath/a:/home/runner/.jaxb/jaxb-api.jar:/home/runner/.jaxb/jaxb-runtime.jar:/home/runner/.jaxb/jaxb-core.jar:/home/runner/.jaxb/istack-commons-runtime.jar:/home/runner/.jaxb/javax.activation.jar"
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   build:
@@ -63,18 +64,15 @@ jobs:
           cd android
           chmod +x ./gradlew
           ./gradlew assembleRelease -x lint --no-daemon
-          echo "=== Searching for APK files ==="
+          echo "=== Searching for all APK files ==="
           find . -name '*.apk' -type f 2>/dev/null || echo "No APK files found"
-        shell: bash
-
-      - name: Upload APK path to GITHUB_ENV
-        run: |
-          APK_PATH=$(find android/app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1)
-          echo "APK_PATH: $APK_PATH"
+          echo "=== Setting APK_PATH ==="
+          APK_PATH=$(find app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1 || true)
+          echo "APK_PATH: '$APK_PATH'"
           echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
         shell: bash
 
-      - name: Create GitHub Release (web)
+      - name: Create GitHub Release
         if: always()
         uses: softprops/action-gh-release@v2
         with:
@@ -87,13 +85,7 @@ jobs:
 
       - name: Upload APK to release
         if: ${{ env.APK_PATH != '' }}
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name || inputs.tag }}
-          name: ${{ github.ref_name || inputs.tag }}
-          files: ${{ env.APK_PATH }}
-          generate_release_notes: true
-          sameReleases: true
-          updatedAssets: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Uploading $APK_PATH to release"
+          gh release upload ${{ github.ref_name || inputs.tag }} "$APK_PATH" --clobber
+        shell: bash
