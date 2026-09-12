@@ -64,14 +64,18 @@ jobs:
         run: |
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleRelease -x lint --no-daemon --stacktrace 2>&1 | tee gradle-build.log || true
+          set +e
+          ./gradlew assembleRelease -x lint --no-daemon --stacktrace 2>&1 | tee gradle-build.log
           BUILD_EXIT=${PIPESTATUS[0]}
+          set -e
           echo "BUILD_EXIT_CODE=$BUILD_EXIT" >> "$GITHUB_OUTPUT"
           echo "=== Searching for all APK files ==="
           find . -name '*.apk' -type f 2>/dev/null || echo "No APK files found"
           if [ "$BUILD_EXIT" -ne 0 ]; then
-            echo "=== BUILD FAILED - last 50 lines ==="
-            tail -50 gradle-build.log
+            echo "::error::APK BUILD FAILED (exit code $BUILD_EXIT). Last 50 lines:"
+            tail -50 gradle-build.log | while IFS= read -r line; do
+              echo "::error::gradle: $line"
+            done
           fi
         shell: bash
 
@@ -90,6 +94,7 @@ jobs:
           echo "APK_PATH: '$APK_PATH'"
           echo "apk_path=${APK_PATH:-}" >> "$GITHUB_OUTPUT"
           echo "apk_found=$([ -n "$APK_PATH" ] && echo "true" || echo "false")" >> "$GITHUB_OUTPUT"
+          echo "APK_FOUND: $([ -n "$APK_PATH" ] && echo "true" || echo "false")"
         shell: bash
 
       - name: Create GitHub Release
