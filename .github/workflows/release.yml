@@ -63,17 +63,30 @@ jobs:
         run: |
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleRelease -x lint --no-daemon
+          set +e
+          ./gradlew assembleRelease -x lint --no-daemon --stacktrace 2>&1 | tee ../gradle-build.log
+          BUILD_EXIT=${PIPESTATUS[0]}
+          set -e
+          echo "BUILD_EXIT_CODE: $BUILD_EXIT"
           echo "=== Searching for all APK files ==="
           find . -name '*.apk' -type f 2>/dev/null || echo "No APK files found"
+          echo "BUILD_EXIT_CODE=$BUILD_EXIT" >> ../gradle-build-status.env
         shell: bash
-        continue-on-error: true
+
+      - name: Save build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: android/gradle-build.log
 
       - name: Set APK path
+        if: always()
         run: |
           APK_PATH=$(find android/app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1 || true)
           echo "APK_PATH: '$APK_PATH'"
           echo "APK_PATH=${APK_PATH}" >> $GITHUB_ENV
+          cat android/gradle-build-status.env 2>/dev/null || true
         shell: bash
 
       - name: Create GitHub Release
