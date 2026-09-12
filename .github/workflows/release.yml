@@ -72,6 +72,10 @@ jobs:
           echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
         shell: bash
 
+      - name: Clean up existing release
+        if: always()
+        run: gh release delete ${{ github.ref_name || inputs.tag }} --yes 2>/dev/null || true
+
       - name: Create GitHub Release
         if: always()
         uses: softprops/action-gh-release@v2
