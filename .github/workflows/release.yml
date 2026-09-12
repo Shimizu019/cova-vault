@@ -28,17 +28,35 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - name: Package build
+      - name: Package web build
         run: |
           cd dist
           zip -r ../cova-vault.zip .
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build APK
+        run: |
+          npx cap sync android
+          cd android
+          ./gradlew assembleRelease -x lint
+          echo "APK_PATH=$(find app/build/outputs/apk/release -name '*.apk' | head -1)" >> $GITHUB_ENV
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name || inputs.tag }}
           name: ${{ github.ref_name || inputs.tag }}
-          files: cova-vault.zip
+          files: |
+            cova-vault.zip
+            ${{ env.APK_PATH }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cova Vault</string>
+    <string name="title_activity_main">Cova Vault</string>
+    <string name="package_name">com.cova.vault</string>
+    <string name="custom_url_scheme">com.cova.vault</string>
+</resources>

@@ -36,3 +36,10 @@ out
 
 # Vite cache
 .vite
+
+# Android
+*.apk
+*.aab
+.gradle/
+/local.properties
+/.cxx/
