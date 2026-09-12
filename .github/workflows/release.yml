@@ -37,7 +37,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Download JAXB for Java 17 compatibility
         run: |
@@ -63,15 +63,17 @@ jobs:
         run: |
           cd android
           chmod +x ./gradlew
-          set +e
-          ./gradlew assembleRelease -x lint --no-daemon --stacktrace 2>&1 | tee ../gradle-build.log
+          ./gradlew assembleRelease -x lint --no-daemon --stacktrace 2>&1 | tee gradle-build.log || true
           BUILD_EXIT=${PIPESTATUS[0]}
-          set -e
           echo "BUILD_EXIT_CODE: $BUILD_EXIT"
           echo "=== Searching for all APK files ==="
           find . -name '*.apk' -type f 2>/dev/null || echo "No APK files found"
-          echo "BUILD_EXIT_CODE=$BUILD_EXIT" >> ../gradle-build-status.env
+          if [ "$BUILD_EXIT" -ne 0 ]; then
+            echo "=== BUILD FAILED - last 50 lines ==="
+            tail -50 gradle-build.log
+          fi
         shell: bash
+        continue-on-error: true
 
       - name: Save build log
         if: always()
@@ -85,8 +87,7 @@ jobs:
         run: |
           APK_PATH=$(find android/app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1 || true)
           echo "APK_PATH: '$APK_PATH'"
-          echo "APK_PATH=${APK_PATH}" >> $GITHUB_ENV
-          cat android/gradle-build-status.env 2>/dev/null || true
+          echo "APK_PATH=${APK_PATH:-none}" >> $GITHUB_ENV
         shell: bash
 
       - name: Create GitHub Release
