@@ -27,11 +27,11 @@ function createNativeAdapter(): StorageLike {
     },
     setItem: (key, value) => {
       cache.set(key, value);
-      Preferences.setItem({ key, value }).catch((err) => console.error('[storage] setItem failed', err));
+      Preferences.set({ key, value }).catch((err: unknown) => console.error('[storage] setItem failed', err));
     },
     removeItem: (key) => {
       cache.delete(key);
-      Preferences.remove({ key }).catch((err) => console.error('[storage] removeItem failed', err));
+      Preferences.remove({ key }).catch((err: unknown) => console.error('[storage] removeItem failed', err));
     },
   };
 }
@@ -44,10 +44,10 @@ export function getStorage(): StorageLike {
 
 export async function initStorage(): Promise<void> {
   if (!isNative) return;
-  
-  const keys = await Preferences.keys();
-  for (const key of keys.keys) {
-    const item = await Preferences.getItem({ key });
+
+  const result = await Preferences.keys();
+  for (const key of result.keys) {
+    const item = await Preferences.get({ key });
     if (item.value !== null) {
       nativeAdapter.setItem(key, item.value);
     }
