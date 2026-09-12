@@ -37,8 +37,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Download JAXB for Java 17 compatibility
+        run: |
+          mkdir -p ~/.jaxb
+          curl -sL -o ~/.jaxb/jaxb-api.jar https://repo1.maven.org/maven2/javax/xml/bind/jaxb-api/2.3.1/jaxb-api-2.3.1.jar
+          curl -sL -o ~/.jaxb/jaxb-runtime.jar https://repo1.maven.org/maven2/org/glassfish/jaxb/jaxb-runtime/2.3.1/jaxb-runtime-2.3.1.jar
+          curl -sL -o ~/.jaxb/jaxb-core.jar https://repo1.maven.org/maven2/org/glassfish/jaxb/jaxb-core/2.3.0.1/jaxb-core-2.3.0.1.jar
+          echo "JAXB downloaded: $(ls -la ~/.jaxb/)"
+        shell: bash
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        env:
+          GRADLE_OPTS: "-Djava.class.path=${{ github.workspace }}/.jaxb/jaxb-api.jar:${{ github.workspace }}/.jaxb/jaxb-runtime.jar:${{ github.workspace }}/.jaxb/jaxb-core.jar"
 
       - name: Install Android SDK packages
         run: |
@@ -52,10 +63,15 @@ jobs:
             exit 1
           fi
         shell: bash
+        env:
+          GRADLE_OPTS: "-Djava.class.path=/home/runner/.jaxb/jaxb-api.jar:/home/runner/.jaxb/jaxb-runtime.jar:/home/runner/.jaxb/jaxb-core.jar"
 
       - name: Sync Capacitor
-        run: npx cap sync android
+        run: npm exec cap sync android
         shell: bash
+        env:
+          CLASSPATH: "/home/runner/.jaxb/jaxb-api.jar:/home/runner/.jaxb/jaxb-runtime.jar:/home/runner/.jaxb/jaxb-core.jar"
+          GRADLE_OPTS: "-Djava.class.path=/home/runner/.jaxb/jaxb-api.jar:/home/runner/.jaxb/jaxb-runtime.jar:/home/runner/.jaxb/jaxb-core.jar"
 
       - name: Build APK
         run: |
@@ -66,6 +82,9 @@ jobs:
           APK_PATH=$(find app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1)
           echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
         shell: bash
+        env:
+          CLASSPATH: "/home/runner/.jaxb/jaxb-api.jar:/home/runner/.jaxb/jaxb-runtime.jar:/home/runner/.jaxb/jaxb-core.jar"
+          GRADLE_OPTS: "-Djava.class.path=/home/runner/.jaxb/jaxb-api.jar:/home/runner/.jaxb/jaxb-runtime.jar:/home/runner/.jaxb/jaxb-core.jar"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
