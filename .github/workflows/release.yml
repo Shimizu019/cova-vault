@@ -18,11 +18,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
 
       - run: npm ci
       - run: npm run build
@@ -41,18 +42,24 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK packages
+      - name: Install Android SDK platform 35
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          echo "y" | $ANDROID_HOME/cmdline-tools/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0" 2>&1
-          echo "SDK packages installed"
+          ls -la $ANDROID_HOME/cmdline-tools/ 2>/dev/null || echo "cmdline-tools not at expected path"
+          find $ANDROID_HOME -name "sdkmanager" -type f 2>/dev/null || echo "sdkmanager not found"
+          SDKMGR=$(find $ANDROID_HOME -name "sdkmanager" -type f 2>/dev/null | head -1)
+          if [ -n "$SDKMGR" ]; then
+            echo "y" | "$SDKMGR" "platforms;android-35" "build-tools;35.0.0" 2>&1
+          else
+            echo "ERROR: sdkmanager not found"
+            exit 1
+          fi
+        shell: bash
 
-      - name: Copy web assets to Android
-        run: |
-          mkdir -p android/app/src/main/assets/public
-          cp -r dist/* android/app/src/main/assets/public/
-          echo "Web assets copied"
+      - name: Sync Capacitor
+        run: npx cap sync android
+        shell: bash
 
       - name: Build APK
         run: |
