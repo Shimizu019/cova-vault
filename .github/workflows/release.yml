@@ -29,9 +29,7 @@ jobs:
       - run: npm run build
 
       - name: Package web build
-        run: |
-          cd dist
-          zip -r ../cova-vault.zip .
+        run: cd dist && zip -r ../cova-vault.zip .
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -42,13 +40,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK platform 35
+      - name: Install Android SDK packages
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          ls -la $ANDROID_HOME/cmdline-tools/ 2>/dev/null || echo "cmdline-tools not at expected path"
-          find $ANDROID_HOME -name "sdkmanager" -type f 2>/dev/null || echo "sdkmanager not found"
           SDKMGR=$(find $ANDROID_HOME -name "sdkmanager" -type f 2>/dev/null | head -1)
+          echo "SDKMGR=$SDKMGR"
           if [ -n "$SDKMGR" ]; then
             echo "y" | "$SDKMGR" "platforms;android-35" "build-tools;35.0.0" 2>&1
           else
