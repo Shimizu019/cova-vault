@@ -48,19 +48,17 @@ jobs:
           echo "y" | $ANDROID_HOME/cmdline-tools/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0" 2>&1
           echo "SDK packages installed"
 
-      - name: Sync Capacitor
+      - name: Copy web assets to Android
         run: |
-          which node
-          which npm
-          ls -la node_modules/.bin/cap
-          ./node_modules/.bin/cap sync android
-          echo "Cap sync completed"
+          mkdir -p android/app/src/main/assets/public
+          cp -r dist/* android/app/src/main/assets/public/
+          echo "Web assets copied"
 
       - name: Build APK
         run: |
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleRelease -x lint --no-daemon --stacktrace
+          ./gradlew assembleRelease -x lint --no-daemon
           find app/build/outputs/apk/release -name '*.apk' -print
           APK_PATH=$(find app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1)
           echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
