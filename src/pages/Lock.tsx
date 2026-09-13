@@ -3,11 +3,62 @@ import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { useUIStore, useSettingsStore, useCredentialStore, useNoteStore, useTaskStore, useWalletStore, useSavingsStore, useActivityStore } from '@store';
 import { useNavigate } from 'react-router-dom';
 import { isFirstTime, verify, clearMasterPassword, onMasterPasswordChange } from '@lib/auth/authStorage';
-import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData } from '@lib/crypto/vaultStorage';
+import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData, vaultStorage, decryptPayload } from '@lib/crypto/vaultStorage';
 import CovaLogo from '../assets/image/CovaLogo.png';
 
 const PASSWORD_INPUT_ID = 'cova-lock-password';
 const PASSWORD_ERROR_ID = 'cova-lock-password-error';
+
+const STORE_KEYS = [
+  'cova-credential-store',
+  'cova-note-store',
+  'cova-task-store',
+  'cova-wallet-store',
+  'cova-savings-store',
+  'cova-activity-store',
+  'cova-ui-store',
+  'cova-settings-store',
+];
+
+async function rehydrateStores() {
+  for (const key of STORE_KEYS) {
+    const encrypted = await vaultStorage.getItem(key);
+    if (encrypted) {
+      try {
+        const decrypted = await decryptPayload(encrypted);
+        const parsed = JSON.parse(decrypted);
+        switch (key) {
+          case 'cova-credential-store':
+            useCredentialStore.setState(parsed);
+            break;
+          case 'cova-note-store':
+            useNoteStore.setState(parsed);
+            break;
+          case 'cova-task-store':
+            useTaskStore.setState(parsed);
+            break;
+          case 'cova-wallet-store':
+            useWalletStore.setState(parsed);
+            break;
+          case 'cova-savings-store':
+            useSavingsStore.setState(parsed);
+            break;
+          case 'cova-activity-store':
+            useActivityStore.setState(parsed);
+            break;
+          case 'cova-ui-store':
+            useUIStore.setState(parsed);
+            break;
+          case 'cova-settings-store':
+            useSettingsStore.setState(parsed);
+            break;
+        }
+      } catch (err) {
+        console.error(`[rehydrate] Failed to rehydrate ${key}:`, err);
+      }
+    }
+  }
+}
 
 // Minimum time the loading state stays visible, so the spinner doesn't
 // flash so fast that the user can't tell anything happened.
@@ -110,11 +161,15 @@ export function Lock(): React.ReactElement {
         const { key } = await deriveKey(submitted, salt);
         setVaultKey(key);
         updateSettings({ lastUnlockedAt: new Date().toISOString() });
-        addToast('First-time access — please set a new password', 'info');
-        navigate('/settings#security');
+
+        // Re-hydrate stores for first-time setup
+        await rehydrateStores();
       } catch {
         setAuthError('Could not unlock vault');
+        return;
       }
+      addToast('First-time access — please set a new password', 'info');
+      navigate('/settings#security');
       return;
     }
 
@@ -129,14 +184,8 @@ export function Lock(): React.ReactElement {
       return;
     }
 
-    // 6. Clear in-memory store state so they can rehydrate from secure storage
-    //    now that the vault key is available.
-    useCredentialStore.setState({ credentials: [], folders: [] });
-    useNoteStore.setState({ notes: [], folders: [] });
-    useTaskStore.setState({ tasks: [], folders: [] });
-    useWalletStore.setState({ records: [], startingBalance: 0, budgets: [] });
-    useSavingsStore.setState({ goals: [] });
-    useActivityStore.setState({ activities: [] });
+    // 6. Manually re-hydrate all encrypted stores now that vault key is available
+    await rehydrateStores();
 
     // 7. Returning user with a correct password → vault.
     setFirstTime(false);
