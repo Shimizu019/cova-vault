@@ -20,44 +20,65 @@ const STORE_KEYS = [
   'cova-settings-store',
 ];
 
+const DEBUG = true;
+function log(...args: unknown[]) { if (DEBUG) console.log('[Lock]', ...args); }
+function logError(...args: unknown[]) { if (DEBUG) console.error('[Lock]', ...args); }
+
 async function rehydrateStores() {
+  log('rehydrateStores: starting...');
   for (const key of STORE_KEYS) {
+    log('rehydrateStores: processing', key);
     const encrypted = await vaultStorage.getItem(key);
     if (encrypted) {
+      log('rehydrateStores:', key, 'found encrypted data', `${encrypted.length} chars`);
       try {
         const decrypted = await decryptPayload(encrypted);
+        log('rehydrateStores:', key, 'decrypted', `${decrypted.length} chars`);
         const parsed = JSON.parse(decrypted);
+        log('rehydrateStores:', key, 'parsed keys', Object.keys(parsed));
         switch (key) {
           case 'cova-credential-store':
+            log('rehydrateStores: setting credential store', parsed.credentials?.length || 0, 'credentials', parsed.folders?.length || 0, 'folders');
             useCredentialStore.setState(parsed);
             break;
           case 'cova-note-store':
+            log('rehydrateStores: setting note store', parsed.notes?.length || 0, 'notes', parsed.folders?.length || 0, 'folders');
             useNoteStore.setState(parsed);
             break;
           case 'cova-task-store':
+            log('rehydrateStores: setting task store', parsed.tasks?.length || 0, 'tasks', parsed.folders?.length || 0, 'folders');
             useTaskStore.setState(parsed);
             break;
           case 'cova-wallet-store':
+            log('rehydrateStores: setting wallet store', parsed.records?.length || 0, 'records', parsed.budgets?.length || 0, 'budgets');
             useWalletStore.setState(parsed);
             break;
           case 'cova-savings-store':
+            log('rehydrateStores: setting savings store', parsed.goals?.length || 0, 'goals');
             useSavingsStore.setState(parsed);
             break;
           case 'cova-activity-store':
+            log('rehydrateStores: setting activity store', parsed.activities?.length || 0, 'activities');
             useActivityStore.setState(parsed);
             break;
           case 'cova-ui-store':
+            log('rehydrateStores: setting ui store');
             useUIStore.setState(parsed);
             break;
           case 'cova-settings-store':
+            log('rehydrateStores: setting settings store');
             useSettingsStore.setState(parsed);
             break;
         }
+        log('rehydrateStores:', key, 'SUCCESS');
       } catch (err) {
-        console.error(`[rehydrate] Failed to rehydrate ${key}:`, err);
+        logError('rehydrateStores: Failed to rehydrate', key, err);
       }
+    } else {
+      log('rehydrateStores:', key, 'no data found');
     }
   }
+  log('rehydrateStores: complete');
 }
 
 // Minimum time the loading state stays visible, so the spinner doesn't

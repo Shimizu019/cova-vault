@@ -3,17 +3,37 @@ import { Capacitor } from '@capacitor/core';
 
 const isNative = Capacitor.isPluginAvailable('Preferences');
 
+const DEBUG = true;
+
+function log(...args: unknown[]) {
+  if (DEBUG) console.log('[storage]', ...args);
+}
+
+function logError(...args: unknown[]) {
+  if (DEBUG) console.error('[storage]', ...args);
+}
+
 export interface StorageLike {
   getItem(key: string): string | null | Promise<string | null>;
-  setItem(key: string, value: string): void;
-  removeItem(key: string): void;
+  setItem(key: string, value: string): void | Promise<void>;
+  removeItem(key: string): void | Promise<void>;
 }
 
 function createLocalStorageAdapter(): StorageLike {
   return {
-    getItem: (key) => localStorage.getItem(key),
-    setItem: (key, value) => localStorage.setItem(key, value),
-    removeItem: (key) => localStorage.removeItem(key),
+    getItem: (key) => {
+      const val = localStorage.getItem(key);
+      log('getItem(localStorage)', key, val ? `${val.length} chars` : 'null');
+      return val;
+    },
+    setItem: (key, value) => {
+      log('setItem(localStorage)', key, `${value.length} chars`);
+      localStorage.setItem(key, value);
+    },
+    removeItem: (key) => {
+      log('removeItem(localStorage)', key);
+      localStorage.removeItem(key);
+    },
   };
 }
 
@@ -22,26 +42,47 @@ function createNativeAdapter(): StorageLike {
 
   return {
     getItem: async (key) => {
-      if (cache.has(key)) return cache.get(key)!;
+      if (cache.has(key)) {
+        const val = cache.get(key)!;
+        log('getItem(native:cache)', key, `${val.length} chars`);
+        return val;
+      }
       // Fallback: read directly from Preferences if not in cache
       try {
+        log('getItem(native:preferences)', key, 'reading...');
         const item = await Preferences.get({ key });
         if (item.value !== null) {
           cache.set(key, item.value);
+          log('getItem(native:preferences)', key, `${item.value.length} chars`, 'cached');
           return item.value;
         }
+        log('getItem(native:preferences)', key, 'null');
       } catch (err) {
-        console.error('[storage] getItem failed', err);
+        logError('getItem failed', key, err);
       }
       return null;
     },
-    setItem: (key, value) => {
+    setItem: async (key, value) => {
+      log('setItem(native)', key, `${value.length} chars`, 'writing...');
       cache.set(key, value);
-      Preferences.set({ key, value }).catch((err: unknown) => console.error('[storage] setItem failed', err));
+      try {
+        await Preferences.set({ key, value });
+        log('setItem(native)', key, 'SUCCESS');
+      } catch (err) {
+        logError('setItem failed', key, err);
+        throw err;
+      }
     },
-    removeItem: (key) => {
+    removeItem: async (key) => {
+      log('removeItem(native)', key);
       cache.delete(key);
-      Preferences.remove({ key }).catch((err: unknown) => console.error('[storage] removeItem failed', err));
+      try {
+        await Preferences.remove({ key });
+        log('removeItem(native)', key, 'SUCCESS');
+      } catch (err) {
+        logError('removeItem failed', key, err);
+        throw err;
+      }
     },
   };
 }
@@ -49,18 +90,31 @@ function createNativeAdapter(): StorageLike {
 const nativeAdapter = createNativeAdapter();
 
 export function getStorage(): StorageLike {
-  return isNative ? nativeAdapter : createLocalStorageAdapter();
+  const adapter = isNative ? nativeAdapter : createLocalStorageAdapter();
+  log('getStorage()', isNative ? 'native' : 'web');
+  return adapter;
 }
 
 export async function initStorage(): Promise<void> {
-  if (!isNative) return;
+  if (!isNative) {
+    log('initStorage: web platform, skipping');
+    return;
+  }
 
-  const result = await Preferences.keys();
-  for (const key of result.keys) {
-    const item = await Preferences.get({ key });
-    if (item.value !== null) {
-      nativeAdapter.setItem(key, item.value);
+  log('initStorage: starting...');
+  try {
+    const result = await Preferences.keys();
+    log('initStorage: found keys', result.keys.length, result.keys);
+    for (const key of result.keys) {
+      const item = await Preferences.get({ key });
+      if (item.value !== null) {
+        nativeAdapter.setItem(key, item.value);
+        log('initStorage: cached', key, `${item.value.length} chars`);
+      }
     }
+    log('initStorage: complete');
+  } catch (err) {
+    logError('initStorage failed', err);
   }
 }
 

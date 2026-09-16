@@ -3,6 +3,16 @@ import { getStorage } from '../storage/storage';
 
 const storage = getStorage();
 
+const DEBUG = true;
+
+function log(...args: unknown[]) {
+  if (DEBUG) console.log('[vaultStorage]', ...args);
+}
+
+function logError(...args: unknown[]) {
+  if (DEBUG) console.error('[vaultStorage]', ...args);
+}
+
 type Listener = () => void;
 
 interface VaultStorageEngine {
@@ -16,6 +26,7 @@ let vaultKey: CryptoKey | null = null;
 const VAULT_SALT_KEY = 'cova:vault-salt';
 
 export function setVaultKey(key: CryptoKey | null) {
+  log('setVaultKey', key ? 'SET' : 'CLEARED');
   vaultKey = key;
 }
 
@@ -28,8 +39,10 @@ export function isVaultUnlocked(): boolean {
 }
 
 export async function getOrCreateVaultSalt(): Promise<Uint8Array> {
+  log('getOrCreateVaultSalt: reading...');
   const existing = await storage.getItem(VAULT_SALT_KEY);
   if (existing) {
+    log('getOrCreateVaultSalt: found existing');
     const decoded = atob(existing);
     const bytes = new Uint8Array(decoded.length);
     for (let i = 0; i < decoded.length; i++) {
@@ -38,13 +51,17 @@ export async function getOrCreateVaultSalt(): Promise<Uint8Array> {
     return bytes;
   }
 
+  log('getOrCreateVaultSalt: generating new salt');
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  storage.setItem(VAULT_SALT_KEY, btoa(String.fromCharCode(...salt)));
+  await storage.setItem(VAULT_SALT_KEY, btoa(String.fromCharCode(...salt)));
+  log('getOrCreateVaultSalt: new salt saved');
   return salt;
 }
 
 export async function setVaultSalt(salt: Uint8Array): Promise<void> {
-  storage.setItem(VAULT_SALT_KEY, btoa(String.fromCharCode(...salt)));
+  log('setVaultSalt: saving');
+  await storage.setItem(VAULT_SALT_KEY, btoa(String.fromCharCode(...salt)));
+  log('setVaultSalt: saved');
 }
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -70,6 +87,7 @@ export async function encryptPayload(plaintext: string): Promise<string> {
     throw new Error('Vault is locked');
   }
 
+  log('encryptPayload: encrypting', `${plaintext.length} chars`);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encoded = new TextEncoder().encode(plaintext);
   const ciphertext = await crypto.subtle.encrypt(
@@ -83,7 +101,9 @@ export async function encryptPayload(plaintext: string): Promise<string> {
     data: arrayBufferToBase64(ciphertext),
   };
 
-  return JSON.stringify(payload);
+  const result = JSON.stringify(payload);
+  log('encryptPayload: done', `${result.length} chars`);
+  return result;
 }
 
 export async function decryptPayload(encrypted: string): Promise<string> {
@@ -91,6 +111,7 @@ export async function decryptPayload(encrypted: string): Promise<string> {
     throw new Error('Vault is locked');
   }
 
+  log('decryptPayload: decrypting', `${encrypted.length} chars`);
   try {
     const payload = JSON.parse(encrypted);
     const iv = base64ToBuffer(payload.iv);
@@ -100,36 +121,52 @@ export async function decryptPayload(encrypted: string): Promise<string> {
       vaultKey,
       data.buffer as ArrayBuffer
     );
-    return new TextDecoder().decode(decrypted);
-  } catch {
+    const result = new TextDecoder().decode(decrypted);
+    log('decryptPayload: success', `${result.length} chars`);
+    return result;
+  } catch (err) {
+    logError('decryptPayload: failed', err);
     return encrypted;
   }
 }
 
 export const vaultStorage: VaultStorageEngine = {
   async getItem(key) {
+    log('getItem', key, 'vaultKey:', vaultKey ? 'SET' : 'NULL');
     if (!vaultKey) {
+      log('getItem', key, 'vault locked, returning null');
       return null;
     }
     const raw = await storage.getItem(key);
-    if (!raw) return null;
+    if (!raw) {
+      log('getItem', key, 'no data in storage');
+      return null;
+    }
+    log('getItem', key, 'found encrypted data', `${raw.length} chars`);
     try {
       return await decryptPayload(raw);
-    } catch {
+    } catch (err) {
+      logError('getItem decrypt failed', key, err);
       return null;
     }
   },
 
   async setItem(key, value) {
+    log('setItem', key, 'plaintext', `${value.length} chars`);
     const encrypted = await encryptPayload(value);
-    storage.setItem(key, encrypted);
+    log('setItem', key, 'encrypted', `${encrypted.length} chars`, 'writing...');
+    await storage.setItem(key, encrypted);
+    log('setItem', key, 'SUCCESS');
   },
 
   async removeItem(key) {
-    storage.removeItem(key);
+    log('removeItem', key);
+    await storage.removeItem(key);
+    log('removeItem', key, 'SUCCESS');
   },
 
   subscribe(key, listener) {
+    log('subscribe', key);
     const handler = () => listener();
     window.addEventListener('storage', (e) => {
       if (e.key === key) listener();
