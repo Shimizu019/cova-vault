@@ -104,7 +104,35 @@ jobs:
           gh release delete "$TAG" --yes 2>&1 || echo "No existing release to delete (expected)"
 
           echo "2. Creating new release..."
-          gh release create "$TAG" --title "$TAG" --generate-notes 2>&1
+          cat > release-notes.md << 'EOF'
+          🚀 Welcome to Cova Vault ${{ env.TAG }}
+          This is a beta testing release of Cova Vault — a secure, all-in-one personal vault app where you can keep your passwords, notes, tasks, finances, savings goals, and more in one organized place.
+
+          This beta build is being shared to test the app's features, check that everything is working smoothly, and discover any issues that still need to be fixed. Some features may still change or have bugs, and your feedback is very welcome!
+
+          📌 What is Cova Vault?
+          Cova Vault is a privacy-focused personal vault application designed to help you organize your daily life securely. It runs locally on your device with no cloud sync required, keeping your data in your own hands.
+
+          ✨ Main Features
+          🔐 Credentials — Store and manage your passwords securely
+          📝 Notes — Keep quick notes, ideas, and references
+          ✅ Tasks — Track your to-dos and schedules
+          💰 PeraLog (Finance) — Track income, expenses, budgets, and balance
+          🎯 Savings — Set savings goals and monitor your progress
+          📁 Folders — Organize everything with easy navigation
+          ⭐ Favorites — Quick access to your most-used items
+          📅 Calendar & Schedule — Keep track of dates and deadlines
+          🔑 Password Generator — Create strong, secure passwords
+          📊 Activity Log — See everything happening in your vault
+          📱 Mobile-Ready — Works great on phones and tablets
+          🔧 What's New in ${{ env.TAG }}
+          Fixed mobile storage initialization to prevent crashes
+          Improved configuration file formatting
+          Updated APK naming to include the version tag
+          ⚠️ Beta Notice
+          This is a beta release, so some features may not be fully finished yet. You may experience bugs, missing features, or changes in future updates. Please report any issues you find so we can make Cova Vault better!
+          EOF
+          gh release create "$TAG" --title "$TAG" -F release-notes.md 2>&1
 
           echo "3. Uploading web build..."
           gh release upload "$TAG" cova-vault.zip --clobber 2>&1
@@ -124,3 +152,4 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name || inputs.tag }}
