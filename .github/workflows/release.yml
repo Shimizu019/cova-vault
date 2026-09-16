@@ -90,12 +90,46 @@ jobs:
           echo "apk_path=${APK_PATH:-}" >> "$GITHUB_OUTPUT"
         shell: bash
 
+      - name: Generate changelog
+        id: changelog
+        if: always()
+        run: |
+          TAG="${{ github.ref_name || inputs.tag }}"
+          case "$TAG" in
+            v0.1.1-beta)
+              CHANGELOG="Fixed mobile storage initialization to prevent crashes
+Improved configuration file formatting
+Updated APK naming to include the version tag"
+              ;;
+            v0.1.2-beta)
+              CHANGELOG="Fixed fire-and-forget writes in native storage adapter (Preferences.set was not awaited)
+Added fallback read from Capacitor Preferences if cache miss
+Fixed async getItem in authStorage and vaultStorage"
+              ;;
+            v0.1.3-beta)
+              CHANGELOG="Fixed critical persistence bugs causing data loss on app restart:
+- Fire-and-forget writes in native storage (Preferences.set/remove now awaited)
+- Missing await in vaultStorage.setItem, getOrCreateVaultSalt, setVaultSalt, reencryptVault
+- Added comprehensive debug logging across storage, vaultStorage, encryptedPersist, and Lock rehydration
+- Manual rehydrateStores() after vault unlock with detailed per-store logging
+- Fixed store initialization timing: initStorage() now runs before any store imports via dynamic import"
+              ;;
+            *)
+              CHANGELOG="Bug fixes and improvements"
+              ;;
+          esac
+          echo "changelog<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CHANGELOG" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+        shell: bash
+
       - name: Create GitHub Release
         if: always()
         run: |
           TAG="${{ github.ref_name || inputs.tag }}"
           BUILD_EXIT="${{ steps.build_apk.outputs.build_exit_code }}"
           APK_PATH="${{ steps.find_apk.outputs.apk_path }}"
+          CHANGELOG="${{ steps.changelog.outputs.changelog }}"
           echo "=== Releasing tag: $TAG ==="
           echo "BUILD_EXIT_CODE: $BUILD_EXIT"
           echo "APK_PATH: '$APK_PATH'"
@@ -125,10 +159,9 @@ jobs:
           🔑 Password Generator — Create strong, secure passwords
           📊 Activity Log — See everything happening in your vault
           📱 Mobile-Ready — Works great on phones and tablets
+
           🔧 What's New in ${{ env.TAG }}
-          Fixed mobile storage initialization to prevent crashes
-          Improved configuration file formatting
-          Updated APK naming to include the version tag
+          ${CHANGELOG}
           ⚠️ Beta Notice
           This is a beta release, so some features may not be fully finished yet. You may experience bugs, missing features, or changes in future updates. Please report any issues you find so we can make Cova Vault better!
           EOF
