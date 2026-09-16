@@ -10,6 +10,7 @@ import { useSettingsStore } from '@store';
 import { useAutoLock } from '@hooks/useAutoLock';
 import { logVaultDataMetadata, setVaultKey } from '@lib/crypto/vaultStorage';
 import { flushStorage } from '@lib/storage/storage';
+import { flushEncryptedPersistence } from '@lib/crypto/encryptedStorage';
 
 export function AppShell() {
   const location = useLocation();
@@ -205,6 +206,7 @@ export function AppShell() {
                     setUserDropdownOpen(false);
                     void (async () => {
                       await logVaultDataMetadata('before-lock');
+                      await flushEncryptedPersistence();
                       await flushStorage();
                       setVaultKey(null);
                       await logVaultDataMetadata('after-lock');
@@ -223,6 +225,7 @@ export function AppShell() {
                     setUserDropdownOpen(false);
                     void (async () => {
                       await logVaultDataMetadata('before-logout');
+                      await flushEncryptedPersistence();
                       await flushStorage();
                       setVaultKey(null);
                       await logVaultDataMetadata('after-logout');

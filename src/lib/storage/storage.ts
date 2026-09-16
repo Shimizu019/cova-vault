@@ -58,7 +58,7 @@ function createNativeAdapter(): NativeStorageLike {
     return next;
   };
 
-  return {
+  const adapter: NativeStorageLike = {
     cacheItem: (key, value) => {
       cache.set(key, value);
     },
@@ -90,8 +90,8 @@ function createNativeAdapter(): NativeStorageLike {
       });
     },
   };
-
   nativeAdapterFlush = () => pendingWrites;
+  return adapter;
 }
 
 const nativeAdapter = createNativeAdapter();

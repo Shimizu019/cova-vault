@@ -6,6 +6,14 @@ const DEBUG = true;
 function log(...args: unknown[]) { if (DEBUG) console.log('[encryptedPersist]', ...args); }
 function logError(...args: unknown[]) { if (DEBUG) console.error('[encryptedPersist]', ...args); }
 
+let pendingWrites = new Set<Promise<unknown>>();
+
+export async function flushEncryptedPersistence(): Promise<void> {
+  while (pendingWrites.size > 0) {
+    await Promise.allSettled([...pendingWrites]);
+  }
+}
+
 export function encryptedPersist<T>(
   stateCreator: StateCreator<T>,
   options: { name: string; partialize?: (state: T) => Partial<T> } = { name: 'cova-store' }
@@ -22,7 +30,10 @@ export function encryptedPersist<T>(
         },
         setItem: (name: string, value: string) => {
           log('setItem', name, `${value.length} chars`);
-          return vaultStorage.setItem(name, value);
+          const write = vaultStorage.setItem(name, value);
+          pendingWrites.add(write);
+          void write.finally(() => pendingWrites.delete(write));
+          return write;
         },
         removeItem: (name: string) => {
           log('removeItem', name);

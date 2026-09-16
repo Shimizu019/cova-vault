@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { isFirstTime, verify, clearMasterPassword, onMasterPasswordChange } from '@lib/auth/authStorage';
 import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData, vaultStorage, decryptPayload, logVaultDataMetadata } from '@lib/crypto/vaultStorage';
 import { flushStorage } from '@lib/storage/storage';
+import { flushEncryptedPersistence } from '@lib/crypto/encryptedStorage';
 import CovaLogo from '../assets/image/CovaLogo.png';
 
 const PASSWORD_INPUT_ID = 'cova-lock-password';
@@ -227,6 +228,7 @@ export function Lock(): React.ReactElement {
     await clearMasterPassword();
     setVaultKey(null);
     await purgeVaultData();
+    await flushEncryptedPersistence();
     await flushStorage();
     setFirstTime(true);
     setAuthError(null);
