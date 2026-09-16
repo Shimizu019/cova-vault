@@ -40,7 +40,7 @@ const FIRST_TIME_PASSWORD = 'CHANGEME';
 export async function verify(candidate: string): Promise<boolean> {
   if (!candidate) return false;
 
-  const stored = await storage.getItem(STORAGE_KEY);
+  const stored = storage.getItem(STORAGE_KEY);
 
   // No stored hash → first run. CHANGEME is the only accepted value.
   if (!stored) {
