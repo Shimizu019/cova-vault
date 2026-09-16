@@ -114,6 +114,13 @@ Fixed async getItem in authStorage and vaultStorage"
 - Manual rehydrateStores() after vault unlock with detailed per-store logging
 - Fixed store initialization timing: initStorage() now runs before any store imports via dynamic import"
               ;;
+            v0.1.4-beta)
+              CHANGELOG="Fixed critical data persistence bug causing all user data (Credentials, Wallet, Savings, Notes, Tasks) to disappear after app restart:
+- Root cause: Zustand persist middleware calls storage.setItem() synchronously, but native Capacitor Preferences writes were async and fire-and-forget
+- Fix: Native storage adapter now synchronous with background write queue - caches immediately, queues Preferences.set() for async completion
+- All 5 data stores (Credentials, Notes, Tasks, Wallet, Savings) now persist correctly across full app termination/restart
+- Added comprehensive debug logging to trace: store name, key, save started/completed, item count, native write success/failure, encryption/decryption, rehydration"
+              ;;
             *)
               CHANGELOG="Bug fixes and improvements"
               ;;
