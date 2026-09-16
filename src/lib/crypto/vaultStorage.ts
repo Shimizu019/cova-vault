@@ -28,7 +28,7 @@ export function isVaultUnlocked(): boolean {
 }
 
 export async function getOrCreateVaultSalt(): Promise<Uint8Array> {
-  const existing = storage.getItem(VAULT_SALT_KEY);
+  const existing = await storage.getItem(VAULT_SALT_KEY);
   if (existing) {
     const decoded = atob(existing);
     const bytes = new Uint8Array(decoded.length);
@@ -111,7 +111,7 @@ export const vaultStorage: VaultStorageEngine = {
     if (!vaultKey) {
       return null;
     }
-    const raw = storage.getItem(key);
+    const raw = await storage.getItem(key);
     if (!raw) return null;
     try {
       return await decryptPayload(raw);
@@ -171,7 +171,7 @@ export async function reencryptVault(oldKey: CryptoKey, newPassword: string): Pr
   ];
 
   for (const storeKey of storeKeys) {
-    const raw = storage.getItem(storeKey);
+    const raw = await storage.getItem(storeKey);
     if (!raw) continue;
     
     let plaintext: string;

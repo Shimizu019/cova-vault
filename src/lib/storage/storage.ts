@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core';
 const isNative = Capacitor.isPluginAvailable('Preferences');
 
 export interface StorageLike {
-  getItem(key: string): string | null;
+  getItem(key: string): string | null | Promise<string | null>;
   setItem(key: string, value: string): void;
   removeItem(key: string): void;
 }
@@ -21,8 +21,18 @@ function createNativeAdapter(): StorageLike {
   const cache = new Map<string, string>();
 
   return {
-    getItem: (key) => {
+    getItem: async (key) => {
       if (cache.has(key)) return cache.get(key)!;
+      // Fallback: read directly from Preferences if not in cache
+      try {
+        const item = await Preferences.get({ key });
+        if (item.value !== null) {
+          cache.set(key, item.value);
+          return item.value;
+        }
+      } catch (err) {
+        console.error('[storage] getItem failed', err);
+      }
       return null;
     },
     setItem: (key, value) => {
