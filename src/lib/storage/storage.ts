@@ -13,10 +13,14 @@ function logError(...args: unknown[]) {
   if (DEBUG) console.error('[storage]', ...args);
 }
 
+// Direct native writes via Capacitor Preferences. We do NOT queue writes because
+// queued writes can be lost if the app closes before the queue drains.
+// Capacitor bridge calls are synchronous from the JS perspective.
+
 export interface StorageLike {
-  getItem(key: string): string | null | Promise<string | null>;
-  setItem(key: string, value: string): void | Promise<void>;
-  removeItem(key: string): void | Promise<void>;
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
 }
 
 function createLocalStorageAdapter(): StorageLike {
@@ -41,47 +45,35 @@ function createNativeAdapter(): StorageLike {
   const cache = new Map<string, string>();
 
   return {
-    getItem: async (key) => {
+    getItem: (key) => {
       if (cache.has(key)) {
         const val = cache.get(key)!;
         log('getItem(native:cache)', key, `${val.length} chars`);
         return val;
       }
-      // Fallback: read directly from Preferences if not in cache
-      try {
-        log('getItem(native:preferences)', key, 'reading...');
-        const item = await Preferences.get({ key });
-        if (item.value !== null) {
-          cache.set(key, item.value);
-          log('getItem(native:preferences)', key, `${item.value.length} chars`, 'cached');
-          return item.value;
-        }
-        log('getItem(native:preferences)', key, 'null');
-      } catch (err) {
-        logError('getItem failed', key, err);
-      }
+      // Synchronous fallback: read from cache only
+      // Native reads happen during initStorage()
+      log('getItem(native:cache)', key, 'miss, returning null');
       return null;
     },
-    setItem: async (key, value) => {
-      log('setItem(native)', key, `${value.length} chars`, 'writing...');
+    setItem: (key, value) => {
+      log('setItem(native)', key, `${value.length} chars`, 'writing directly');
       cache.set(key, value);
       try {
-        await Preferences.set({ key, value });
+        Preferences.set({ key, value });
         log('setItem(native)', key, 'SUCCESS');
       } catch (err) {
-        logError('setItem failed', key, err);
-        throw err;
+        logError('setItem(native) failed', key, err);
       }
     },
-    removeItem: async (key) => {
-      log('removeItem(native)', key);
+    removeItem: (key) => {
+      log('removeItem(native)', key, 'writing directly');
       cache.delete(key);
       try {
-        await Preferences.remove({ key });
+        Preferences.remove({ key });
         log('removeItem(native)', key, 'SUCCESS');
       } catch (err) {
-        logError('removeItem failed', key, err);
-        throw err;
+        logError('removeItem(native) failed', key, err);
       }
     },
   };

@@ -137,7 +137,7 @@ export const vaultStorage: VaultStorageEngine = {
       log('getItem', key, 'vault locked, returning null');
       return null;
     }
-    const raw = await storage.getItem(key);
+    const raw = storage.getItem(key);
     if (!raw) {
       log('getItem', key, 'no data in storage');
       return null;
@@ -175,7 +175,7 @@ export const vaultStorage: VaultStorageEngine = {
   },
 };
 
-export function purgeVaultData() {
+export async function purgeVaultData() {
   const keys = [
     'cova:vault-salt',
     'cova-credential-store',
@@ -188,7 +188,7 @@ export function purgeVaultData() {
     'cova-ui-store',
   ];
   for (const key of keys) {
-    storage.removeItem(key);
+    await storage.removeItem(key);
   }
 }
 
@@ -238,7 +238,7 @@ export async function reencryptVault(oldKey: CryptoKey, newPassword: string): Pr
       iv: arrayBufferToBase64(newIv.buffer as ArrayBuffer),
       data: arrayBufferToBase64(newCiphertext),
     };
-     storage.setItem(storeKey, JSON.stringify(newPayload));
+     await storage.setItem(storeKey, JSON.stringify(newPayload));
   }
 
   return newKey;
