@@ -38,6 +38,42 @@ export function isVaultUnlocked(): boolean {
   return vaultKey !== null;
 }
 
+const PERSISTED_STORE_KEYS = [
+  'cova-credential-store',
+  'cova-note-store',
+  'cova-task-store',
+  'cova-wallet-store',
+  'cova-savings-store',
+  'cova-activity-store',
+  'cova-settings-store',
+];
+
+export async function logVaultDataMetadata(stage: string): Promise<void> {
+  const summary: Record<string, unknown> = {};
+  for (const key of PERSISTED_STORE_KEYS) {
+    const raw = storage.getItem(key);
+    if (!raw) {
+      summary[key] = { present: false };
+      continue;
+    }
+
+    const metadata: Record<string, unknown> = { present: true, encryptedChars: raw.length };
+    if (vaultKey) {
+      try {
+        const parsed = JSON.parse(await decryptPayload(raw)) as Record<string, unknown>;
+        for (const field of ['credentials', 'notes', 'tasks', 'records', 'budgets', 'goals', 'activities']) {
+          const value = parsed[field];
+          if (Array.isArray(value)) metadata[`${field}Count`] = value.length;
+        }
+      } catch {
+        metadata.decryptable = false;
+      }
+    }
+    summary[key] = metadata;
+  }
+  log('metadata', stage, summary);
+}
+
 export async function getOrCreateVaultSalt(): Promise<Uint8Array> {
   log('getOrCreateVaultSalt: reading...');
   const existing = await storage.getItem(VAULT_SALT_KEY);

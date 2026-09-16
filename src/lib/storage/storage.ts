@@ -13,15 +13,20 @@ function logError(...args: unknown[]) {
   if (DEBUG) console.error('[storage]', ...args);
 }
 
-// Direct native writes via Capacitor Preferences. We do NOT queue writes because
-// queued writes can be lost if the app closes before the queue drains.
-// Capacitor bridge calls are synchronous from the JS perspective.
+// Native Preferences writes are serialized so callers can flush them before
+// locking or closing the vault.
 
 export interface StorageLike {
   getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-  removeItem(key: string): void;
+  setItem(key: string, value: string): Promise<void>;
+  removeItem(key: string): Promise<void>;
 }
+
+interface NativeStorageLike extends StorageLike {
+  cacheItem(key: string, value: string): void;
+}
+
+let nativeAdapterFlush: () => Promise<void> = async () => undefined;
 
 function createLocalStorageAdapter(): StorageLike {
   return {
@@ -30,21 +35,33 @@ function createLocalStorageAdapter(): StorageLike {
       log('getItem(localStorage)', key, val ? `${val.length} chars` : 'null');
       return val;
     },
-    setItem: (key, value) => {
+    setItem: async (key, value) => {
       log('setItem(localStorage)', key, `${value.length} chars`);
       localStorage.setItem(key, value);
     },
-    removeItem: (key) => {
+    removeItem: async (key) => {
       log('removeItem(localStorage)', key);
       localStorage.removeItem(key);
     },
   };
 }
 
-function createNativeAdapter(): StorageLike {
+function createNativeAdapter(): NativeStorageLike {
   const cache = new Map<string, string>();
+  let pendingWrites = Promise.resolve();
+
+  const enqueue = (operation: () => Promise<void>): Promise<void> => {
+    const next = pendingWrites.then(operation, operation);
+    pendingWrites = next.catch((error) => {
+      logError('native write failed', error);
+    });
+    return next;
+  };
 
   return {
+    cacheItem: (key, value) => {
+      cache.set(key, value);
+    },
     getItem: (key) => {
       if (cache.has(key)) {
         const val = cache.get(key)!;
@@ -57,26 +74,24 @@ function createNativeAdapter(): StorageLike {
       return null;
     },
     setItem: (key, value) => {
-      log('setItem(native)', key, `${value.length} chars`, 'writing directly');
+      log('setItem(native)', key, `${value.length} chars`, 'queued');
       cache.set(key, value);
-      try {
-        Preferences.set({ key, value });
+      return enqueue(async () => {
+        await Preferences.set({ key, value });
         log('setItem(native)', key, 'SUCCESS');
-      } catch (err) {
-        logError('setItem(native) failed', key, err);
-      }
+      });
     },
     removeItem: (key) => {
-      log('removeItem(native)', key, 'writing directly');
+      log('removeItem(native)', key, 'queued');
       cache.delete(key);
-      try {
-        Preferences.remove({ key });
+      return enqueue(async () => {
+        await Preferences.remove({ key });
         log('removeItem(native)', key, 'SUCCESS');
-      } catch (err) {
-        logError('removeItem(native) failed', key, err);
-      }
+      });
     },
   };
+
+  nativeAdapterFlush = () => pendingWrites;
 }
 
 const nativeAdapter = createNativeAdapter();
@@ -100,7 +115,8 @@ export async function initStorage(): Promise<void> {
     for (const key of result.keys) {
       const item = await Preferences.get({ key });
       if (item.value !== null) {
-        nativeAdapter.setItem(key, item.value);
+        // Hydration populates the synchronous cache without scheduling a rewrite.
+        (nativeAdapter as NativeStorageLike).cacheItem(key, item.value);
         log('initStorage: cached', key, `${item.value.length} chars`);
       }
     }
@@ -108,6 +124,13 @@ export async function initStorage(): Promise<void> {
   } catch (err) {
     logError('initStorage failed', err);
   }
+}
+
+export async function flushStorage(): Promise<void> {
+  if (!isNative) return;
+  log('flushStorage: waiting for pending native writes');
+  await nativeAdapterFlush();
+  log('flushStorage: complete');
 }
 
 export { isNative };

@@ -62,17 +62,17 @@ export async function verify(candidate: string): Promise<boolean> {
 /** Persist a new master password. Overwrites any previous value. */
 export async function setMasterPassword(newPassword: string): Promise<void> {
   const hash = await sha256(newPassword);
-   storage.setItem(STORAGE_KEY, hash);
-   // Mark that we've been initialized so the CHANGEME card can hide itself.
-   storage.setItem(LEGACY_FIRST_RUN_KEY, '1');
+  await storage.setItem(STORAGE_KEY, hash);
+  // Mark that we've been initialized so the CHANGEME card can hide itself.
+  await storage.setItem(LEGACY_FIRST_RUN_KEY, '1');
 }
 
 /** Forget the master password. Used by the "Forgot password?" flow.
  *  After clearing, the next unlock must use `CHANGEME` (first-run
  *  state is restored). */
-export function clearMasterPassword(): void {
-  storage.removeItem(STORAGE_KEY);
-  storage.removeItem(LEGACY_FIRST_RUN_KEY);
+export async function clearMasterPassword(): Promise<void> {
+  await storage.removeItem(STORAGE_KEY);
+  await storage.removeItem(LEGACY_FIRST_RUN_KEY);
 }
 
 /** Listen for changes to the master-password hash in other tabs/windows.

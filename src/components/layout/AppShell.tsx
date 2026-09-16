@@ -8,7 +8,8 @@ import { cn } from '@lib/utils';
 import { Avatar } from '@components/ui/Badge';
 import { useSettingsStore } from '@store';
 import { useAutoLock } from '@hooks/useAutoLock';
-import { setVaultKey } from '@lib/crypto/vaultStorage';
+import { logVaultDataMetadata, setVaultKey } from '@lib/crypto/vaultStorage';
+import { flushStorage } from '@lib/storage/storage';
 
 export function AppShell() {
   const location = useLocation();
@@ -202,8 +203,13 @@ export function AppShell() {
                   className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-cova-textSecondary hover:bg-cova-surfaceHover hover:text-cova-text transition-colors duration-fast w-full text-left"
                   onClick={() => {
                     setUserDropdownOpen(false);
-                    setVaultKey(null);
-                    navigate('/lock');
+                    void (async () => {
+                      await logVaultDataMetadata('before-lock');
+                      await flushStorage();
+                      setVaultKey(null);
+                      await logVaultDataMetadata('after-lock');
+                      navigate('/lock');
+                    })();
                   }}
                 >
                   <Lock className="w-4 h-4" />
@@ -215,7 +221,13 @@ export function AppShell() {
                   className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-cova-danger hover:bg-cova-dangerLight transition-colors duration-fast w-full text-left"
                   onClick={() => {
                     setUserDropdownOpen(false);
-                    navigate('/lock');
+                    void (async () => {
+                      await logVaultDataMetadata('before-logout');
+                      await flushStorage();
+                      setVaultKey(null);
+                      await logVaultDataMetadata('after-logout');
+                      navigate('/lock');
+                    })();
                   }}
                 >
                   <LogOut className="w-4 h-4" />

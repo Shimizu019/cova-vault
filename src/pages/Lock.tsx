@@ -3,7 +3,8 @@ import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { useUIStore, useSettingsStore, useCredentialStore, useNoteStore, useTaskStore, useWalletStore, useSavingsStore, useActivityStore } from '@store';
 import { useNavigate } from 'react-router-dom';
 import { isFirstTime, verify, clearMasterPassword, onMasterPasswordChange } from '@lib/auth/authStorage';
-import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData, vaultStorage, decryptPayload } from '@lib/crypto/vaultStorage';
+import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData, vaultStorage, decryptPayload, logVaultDataMetadata } from '@lib/crypto/vaultStorage';
+import { flushStorage } from '@lib/storage/storage';
 import CovaLogo from '../assets/image/CovaLogo.png';
 
 const PASSWORD_INPUT_ID = 'cova-lock-password';
@@ -177,7 +178,7 @@ export function Lock(): React.ReactElement {
     //    and send the user to Settings to set a real master password.
     if (showChangemeHint && submitted === 'CHANGEME') {
       try {
-        purgeVaultData();
+        await purgeVaultData();
         const salt = await getOrCreateVaultSalt();
         const { key } = await deriveKey(submitted, salt);
         setVaultKey(key);
@@ -185,6 +186,7 @@ export function Lock(): React.ReactElement {
 
         // Re-hydrate stores for first-time setup
         await rehydrateStores();
+        await logVaultDataMetadata('after-first-time-unlock');
       } catch {
         setAuthError('Could not unlock vault');
         return;
@@ -207,13 +209,14 @@ export function Lock(): React.ReactElement {
 
     // 6. Manually re-hydrate all encrypted stores now that vault key is available
     await rehydrateStores();
+    await logVaultDataMetadata('after-unlock');
 
     // 7. Returning user with a correct password → vault.
     setFirstTime(false);
     navigate('/dashboard');
   };
 
-  const handleForgotPassword = () => {
+  const handleForgotPassword = async () => {
     const ok = window.confirm(
       'Reset vault?\n\n' +
         'This will permanently delete all encrypted vault data (credentials, notes, wallet, etc.) ' +
@@ -222,9 +225,10 @@ export function Lock(): React.ReactElement {
     );
     if (!ok) return;
 
-    clearMasterPassword();
+    await clearMasterPassword();
     setVaultKey(null);
-    purgeVaultData();
+    await purgeVaultData();
+    await flushStorage();
     setFirstTime(true);
     setAuthError(null);
     setPasswordError(null);

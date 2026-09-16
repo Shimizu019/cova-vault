@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { setVaultKey } from '@lib/crypto/vaultStorage';
 import { useSettingsStore } from '@store';
+import { flushStorage } from '@lib/storage/storage';
 
 const MIN_TIMEOUT = 60 * 1000;
 
@@ -24,8 +25,11 @@ export function useAutoLock() {
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     const lock = () => {
-      setVaultKey(null);
-      navigate('/lock');
+      void (async () => {
+        await flushStorage();
+        setVaultKey(null);
+        navigate('/lock');
+      })();
     };
 
     const resetTimer = () => {
