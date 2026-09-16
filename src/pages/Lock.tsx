@@ -178,7 +178,6 @@ export function Lock(): React.ReactElement {
     //    and send the user to Settings to set a real master password.
     if (showChangemeHint && submitted === 'CHANGEME') {
       try {
-        await purgeVaultData();
         const salt = await getOrCreateVaultSalt();
         const { key } = await deriveKey(submitted, salt);
         setVaultKey(key);
