@@ -2,9 +2,51 @@
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
+import { execSync } from 'child_process'
+import { readFileSync } from 'fs'
+
+// ---------------------------------------------------------------------------
+// Build identity — injected into the bundle as __BUILD_INFO__ so any installed
+// build can prove which source produced it. CI (GitHub Actions) supplies
+// GITHUB_SHA / GITHUB_RUN_NUMBER / GITHUB_REF_NAME; local builds fall back to
+// the local git state.
+// ---------------------------------------------------------------------------
+function resolveGitCommitSha(): string {
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA
+  try {
+    return execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  } catch {
+    return 'unknown'
+  }
+}
+
+function resolveBuildNumber(): string {
+  if (process.env.GITHUB_RUN_NUMBER) return String(process.env.GITHUB_RUN_NUMBER)
+  try {
+    return execSync('git rev-list --count HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  } catch {
+    return '0'
+  }
+}
+
+const buildInfo = {
+  // CI: prefer the release tag (v0.1.8-beta → 0.1.8-beta) since package.json
+  // stays at 0.0.0 between releases. Local builds fall back to package.json.
+  version: process.env.GITHUB_REF_NAME?.startsWith('v')
+    ? process.env.GITHUB_REF_NAME.slice(1)
+    : (JSON.parse(readFileSync('./package.json', 'utf-8')) as { version?: string }).version ?? '0.0.0',
+  tag: process.env.GITHUB_REF_NAME ?? 'local',
+  buildNumber: resolveBuildNumber(),
+  commitSha: resolveGitCommitSha(),
+  buildTime: new Date().toISOString(),
+}
+
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __BUILD_INFO__: JSON.stringify(buildInfo),
+  },
   plugins: [
     react(),
     VitePWA({

@@ -5,6 +5,7 @@ import { AppearanceSection } from '@features/settings/AppearanceSection';
 import { LanguageSection } from '@features/settings/LanguageSection';
 import { SecuritySection } from '@features/settings/SecuritySection';
 import { DataSection } from '@features/settings/DataSection';
+import { DiagnosticsSection } from '@features/settings/DiagnosticsSection';
 
 const SECTION_TITLES: Record<string, { title: string; subtitle: string }> = {
   account: {
@@ -26,6 +27,10 @@ const SECTION_TITLES: Record<string, { title: string; subtitle: string }> = {
   data: {
     title: 'Backup & Export',
     subtitle: 'Manage your encrypted backups and exports.',
+  },
+  diagnostics: {
+    title: 'Diagnostics',
+    subtitle: 'Persistence probe, build identity, and native storage inspection.',
   },
 };
 
@@ -59,6 +64,7 @@ export function Settings() {
         {activeSection === 'language' && <LanguageSection />}
         {activeSection === 'security' && <SecuritySection />}
         {activeSection === 'data' && <DataSection />}
+        {activeSection === 'diagnostics' && <DiagnosticsSection />}
       </div>
     </div>
   );

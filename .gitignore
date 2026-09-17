@@ -43,3 +43,6 @@ out
 .gradle/
 /local.properties
 /.cxx/
+
+# Kilo Code worktrees
+.kilo/

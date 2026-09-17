@@ -14,11 +14,13 @@ import { Activity } from '@pages/Activity';
 import { Wallet } from '@pages/Wallet';
 import { Savings } from '@pages/Savings';
 import { Lock } from '@pages/Lock';
+import { DiagnosticsPage } from '@components/features/settings/DiagnosticsSection';
 
 export function AppRoutes() {
   return (
     <Routes>
       <Route path="/lock" element={<Lock />} />
+      <Route path="/diagnostics" element={<DiagnosticsPage />} />
       <Route element={<AppShell />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/credentials" element={<Credentials />} />

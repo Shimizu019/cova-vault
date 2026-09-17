@@ -1,5 +1,18 @@
 apply plugin: 'com.android.application'
 
+// Build identity — CI exports COVA_VERSION_NAME (release tag, e.g. 0.1.8-beta)
+// and COVA_VERSION_CODE (GitHub run number) so installed builds are
+// distinguishable on the device. Local builds fall back to defaults.
+def covaVersionName = System.getenv("COVA_VERSION_NAME") ?: "1.0"
+def covaVersionCode = 1
+if (System.getenv("COVA_VERSION_CODE")) {
+    try {
+        covaVersionCode = Integer.parseInt(System.getenv("COVA_VERSION_CODE"))
+    } catch (Exception ignored) {
+        covaVersionCode = 1
+    }
+}
+
 android {
     namespace = "com.cova.vault"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +20,8 @@ android {
         applicationId "com.cova.vault"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode covaVersionCode
+        versionName covaVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

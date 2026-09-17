@@ -6,10 +6,15 @@ import { isFirstTime, verify, clearMasterPassword, onMasterPasswordChange } from
 import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData, vaultStorage, decryptPayload, logVaultDataMetadata } from '@lib/crypto/vaultStorage';
 import { flushStorage } from '@lib/storage/storage';
 import { flushEncryptedPersistence } from '@lib/crypto/encryptedStorage';
+import { getBuildInfo } from '@lib/buildInfo';
 import CovaLogo from '../assets/image/CovaLogo.png';
 
 const PASSWORD_INPUT_ID = 'cova-lock-password';
 const PASSWORD_ERROR_ID = 'cova-lock-password-error';
+
+// Static per-build identity, shown in the footer so any installed APK can be
+// verified at a glance (Source Code → Git Commit → APK → Installed App).
+const BUILD = getBuildInfo();
 
 const STORE_KEYS = [
   'cova-credential-store',
@@ -411,7 +416,19 @@ export function Lock(): React.ReactElement {
           </p>
           <p className="mt-1.5 text-[10px] sm:text-[11px] cova-mono uppercase tracking-[0.18em] text-cova-textMuted/70">
             Hand-coded for privacy
-</p>
+          </p>
+          <p className="mt-1 text-[9px] sm:text-[10px] cova-mono text-cova-textMuted/50">
+            v{BUILD.version} · build {BUILD.buildNumber} · {BUILD.commitShort} · {BUILD.buildTime}
+          </p>
+          <div className="mt-2">
+            <button
+              type="button"
+              className="text-[10px] cova-mono uppercase tracking-[0.1em] text-cova-textMuted/70 hover:text-cova-text transition-colors"
+              onClick={() => navigate('/diagnostics')}
+            >
+              Diagnostics
+            </button>
+          </div>
         </div>
       </footer>
     </div>

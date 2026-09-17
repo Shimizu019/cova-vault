@@ -61,7 +61,13 @@ jobs:
 
       - name: Build APK
         id: build_apk
+        env:
+          COVA_VERSION_CODE: ${{ github.run_number }}
+          COVA_VERSION_NAME: ${{ github.ref_name }}
         run: |
+          # versionName = release tag without the leading "v" (e.g. 0.1.8-beta)
+          export COVA_VERSION_NAME="${COVA_VERSION_NAME#v}"
+          echo "Building with versionName=$COVA_VERSION_NAME versionCode=$COVA_VERSION_CODE"
           cd android
           chmod +x ./gradlew
           ./gradlew assembleDebug -x lint --no-daemon --stacktrace 2>&1 | tee gradle-build.log
@@ -120,6 +126,16 @@ jobs:
               CHANGELOG+=$'\n- Fix: Native storage adapter now synchronous with background write queue - caches immediately, queues Preferences.set() for async completion'
               CHANGELOG+=$'\n- All 5 data stores (Credentials, Notes, Tasks, Wallet, Savings) now persist correctly across full app termination/restart'
               CHANGELOG+=$'\n- Added comprehensive debug logging to trace: store name, key, save started/completed, item count, native write success/failure, encryption/decryption, rehydration'
+              ;;
+            v0.1.8-beta)
+              CHANGELOG="Persistence diagnostics: verify the save → logout → restart → unlock lifecycle on-device"
+              CHANGELOG+=$'\n- New Settings → Diagnostics section and standalone /diagnostics page reachable from the Lock screen'
+              CHANGELOG+=$'\n- 3-phase probe: Phase 1 writes sample data + logs out, Phase 2 verifies native storage after force-close (before unlock), Phase 3 verifies rehydration after unlock'
+              CHANGELOG+=$'\n- Stage-by-stage pass/fail for: native write, Preferences.read, decrypt, store rehydrate, UI display — with no secrets logged'
+              CHANGELOG+=$'\n- Raw Capacitor Preferences inspection table with presence/size/hash per storage key'
+              CHANGELOG+=$'\n- Build identity stamping: every APK/footer now shows version, build number, commit SHA, and build time'
+              CHANGELOG+=$'\n- APK versionCode/versionName now stamped from the release tag in CI'
+              CHANGELOG+=$'\n- Fixed mojibake characters in Wallet (₱ peso sign, · separator)'
               ;;
             *)
               CHANGELOG="Bug fixes and improvements"

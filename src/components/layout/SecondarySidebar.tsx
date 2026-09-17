@@ -40,6 +40,7 @@ const sections: SettingsSection[] = [
     icon: Database,
     items: [
       { id: 'data', label: 'Backup & Export', href: '/settings#data' },
+      { id: 'diagnostics', label: 'Diagnostics', href: '/settings#diagnostics' },
     ],
   },
 ];
