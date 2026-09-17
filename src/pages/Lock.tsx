@@ -3,8 +3,9 @@ import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { useUIStore, useSettingsStore, useCredentialStore, useNoteStore, useTaskStore, useWalletStore, useSavingsStore, useActivityStore } from '@store';
 import { useNavigate } from 'react-router-dom';
 import { isFirstTime, verify, clearMasterPassword, onMasterPasswordChange } from '@lib/auth/authStorage';
-import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData, vaultStorage, decryptPayload, logVaultDataMetadata } from '@lib/crypto/vaultStorage';
+import { deriveKey, setVaultKey, getOrCreateVaultSalt, purgeVaultData, logVaultDataMetadata } from '@lib/crypto/vaultStorage';
 import { flushStorage } from '@lib/storage/storage';
+import { hydrateAllStores, resetVaultPersistence } from '@lib/storage/vaultPersistence';
 import { flushEncryptedPersistence } from '@lib/crypto/encryptedStorage';
 import { getBuildInfo } from '@lib/buildInfo';
 import CovaLogo from '../assets/image/CovaLogo.png';
@@ -16,76 +17,39 @@ const PASSWORD_ERROR_ID = 'cova-lock-password-error';
 // verified at a glance (Source Code → Git Commit → APK → Installed App).
 const BUILD = getBuildInfo();
 
-const STORE_KEYS = [
-  'cova-credential-store',
-  'cova-note-store',
-  'cova-task-store',
-  'cova-wallet-store',
-  'cova-savings-store',
-  'cova-activity-store',
-  'cova-ui-store',
-  'cova-settings-store',
-];
-
 const DEBUG = true;
 function log(...args: unknown[]) { if (DEBUG) console.log('[Lock]', ...args); }
 function logError(...args: unknown[]) { if (DEBUG) console.error('[Lock]', ...args); }
 
+/**
+ * Hydrate every encrypted vault store from native storage.
+ *
+ * Delegates to the central persistence service so the read → decrypt → unwrap
+ * → apply sequence exists in exactly ONE place. The previous implementation
+ * read with `vaultStorage.getItem()` (which already decrypts) and then decrypted
+ * a second time, so the `{ state, version }` persist envelope was passed to
+ * `store.setState()` and the real records were written to `state.state.*` while
+ * the live store kept its empty defaults — which the persist middleware then
+ * saved over the good blob.
+ *
+ * Must be called AFTER `setVaultKey()` and BEFORE any store mutation, because
+ * mutations are blocked until hydration completes (see the write gate in
+ * `encryptedStorage.ts`).
+ */
 async function rehydrateStores() {
-  log('rehydrateStores: starting...');
-  for (const key of STORE_KEYS) {
-    log('rehydrateStores: processing', key);
-    const encrypted = await vaultStorage.getItem(key);
-    if (encrypted) {
-      log('rehydrateStores:', key, 'found encrypted data', `${encrypted.length} chars`);
-      try {
-        const decrypted = await decryptPayload(encrypted);
-        log('rehydrateStores:', key, 'decrypted', `${decrypted.length} chars`);
-        const parsed = JSON.parse(decrypted);
-        log('rehydrateStores:', key, 'parsed keys', Object.keys(parsed));
-        switch (key) {
-          case 'cova-credential-store':
-            log('rehydrateStores: setting credential store', parsed.credentials?.length || 0, 'credentials', parsed.folders?.length || 0, 'folders');
-            useCredentialStore.setState(parsed);
-            break;
-          case 'cova-note-store':
-            log('rehydrateStores: setting note store', parsed.notes?.length || 0, 'notes', parsed.folders?.length || 0, 'folders');
-            useNoteStore.setState(parsed);
-            break;
-          case 'cova-task-store':
-            log('rehydrateStores: setting task store', parsed.tasks?.length || 0, 'tasks', parsed.folders?.length || 0, 'folders');
-            useTaskStore.setState(parsed);
-            break;
-          case 'cova-wallet-store':
-            log('rehydrateStores: setting wallet store', parsed.records?.length || 0, 'records', parsed.budgets?.length || 0, 'budgets');
-            useWalletStore.setState(parsed);
-            break;
-          case 'cova-savings-store':
-            log('rehydrateStores: setting savings store', parsed.goals?.length || 0, 'goals');
-            useSavingsStore.setState(parsed);
-            break;
-          case 'cova-activity-store':
-            log('rehydrateStores: setting activity store', parsed.activities?.length || 0, 'activities');
-            useActivityStore.setState(parsed);
-            break;
-          case 'cova-ui-store':
-            log('rehydrateStores: setting ui store');
-            useUIStore.setState(parsed);
-            break;
-          case 'cova-settings-store':
-            log('rehydrateStores: setting settings store');
-            useSettingsStore.setState(parsed);
-            break;
-        }
-        log('rehydrateStores:', key, 'SUCCESS');
-      } catch (err) {
-        logError('rehydrateStores: Failed to rehydrate', key, err);
-      }
-    } else {
-      log('rehydrateStores:', key, 'no data found');
-    }
+  const results = await hydrateAllStores();
+  const failed = results.filter((r) => r.status === 'failed');
+  if (failed.length > 0) {
+    logError(
+      'rehydrateStores: FAILED for',
+      failed.map((f) => `${f.label}: ${f.error}`).join(' | ')
+    );
   }
-  log('rehydrateStores: complete');
+  log(
+    'rehydrateStores: complete',
+    results.map((r) => `${r.label}=${r.status}`).join(', ')
+  );
+  return results;
 }
 
 // Minimum time the loading state stays visible, so the spinner doesn't
@@ -187,10 +151,11 @@ export function Lock(): React.ReactElement {
         const salt = await getOrCreateVaultSalt();
         const { key } = await deriveKey(submitted, salt);
         setVaultKey(key);
-        updateSettings({ lastUnlockedAt: new Date().toISOString() });
 
-        // Re-hydrate stores for first-time setup
+        // Re-hydrate FIRST: hydration opens the write gate per store, so the
+        // settings write below can persist instead of being blocked/clobbering.
         await rehydrateStores();
+        updateSettings({ lastUnlockedAt: new Date().toISOString() });
         await logVaultDataMetadata('after-first-time-unlock');
       } catch {
         setAuthError('Could not unlock vault');
@@ -206,14 +171,16 @@ export function Lock(): React.ReactElement {
       const salt = await getOrCreateVaultSalt();
       const { key } = await deriveKey(submitted, salt);
       setVaultKey(key);
-      updateSettings({ lastUnlockedAt: new Date().toISOString() });
     } catch {
       setAuthError('Could not unlock vault');
       return;
     }
 
-    // 6. Manually re-hydrate all encrypted stores now that vault key is available
+    // 6. Re-hydrate all encrypted stores now that the vault key is available.
+    //    This MUST happen before any store mutation (including updateSettings)
+    //    so saved data is never replaced by the stores' default empty state.
     await rehydrateStores();
+    updateSettings({ lastUnlockedAt: new Date().toISOString() });
     await logVaultDataMetadata('after-unlock');
 
     // 7. Returning user with a correct password → vault.
@@ -233,6 +200,8 @@ export function Lock(): React.ReactElement {
     await clearMasterPassword();
     setVaultKey(null);
     await purgeVaultData();
+    // Gates stay closed after a reset; the next unlock re-hydrates from scratch.
+    resetVaultPersistence();
     await flushEncryptedPersistence();
     await flushStorage();
     setFirstTime(true);

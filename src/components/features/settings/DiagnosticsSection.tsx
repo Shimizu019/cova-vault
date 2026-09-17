@@ -40,6 +40,7 @@ import {
   type ProbeStage,
   type StorageRow,
 } from '@lib/diagnostics/persistenceProbe';
+import { ModulePersistenceSection } from './ModulePersistenceSection';
 
 function StatusIcon({ status }: { status: ProbeStage['status'] }) {
   if (status === 'pass') return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />;
@@ -219,6 +220,13 @@ export function DiagnosticsSection() {
       </div>
 
       {/* Phase 1 — Save + Logout (vault unlocked) */}
+
+      {/* Per-module persistence report — Auth, Credentials, Notes, Tasks,
+          PeraLog / My Wallet, Savings, Folders, Favorites, Calendar/Schedule.
+          Distinguishes "never saved" from "saved but not rehydrated" from
+          "rehydrated but not displayed". */}
+      <ModulePersistenceSection />
+
       <div className="card mb-4 overflow-hidden">
         <div className="px-5 py-4 border-b border-cova-border flex items-center gap-2">
           <Activity className="w-4 h-4 text-cova-textMuted" />

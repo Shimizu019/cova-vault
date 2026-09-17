@@ -10,6 +10,7 @@ import { useSettingsStore } from '@store';
 import { useAutoLock } from '@hooks/useAutoLock';
 import { logVaultDataMetadata, setVaultKey } from '@lib/crypto/vaultStorage';
 import { flushStorage } from '@lib/storage/storage';
+import { resetVaultPersistence } from '@lib/storage/vaultPersistence';
 import { flushEncryptedPersistence } from '@lib/crypto/encryptedStorage';
 
 export function AppShell() {
@@ -209,6 +210,9 @@ export function AppShell() {
                       await flushEncryptedPersistence();
                       await flushStorage();
                       setVaultKey(null);
+                      // Re-arm persistence gates: the next unlock must hydrate
+                      // before any store is allowed to write again.
+                      resetVaultPersistence();
                       await logVaultDataMetadata('after-lock');
                       navigate('/lock');
                     })();
@@ -228,6 +232,9 @@ export function AppShell() {
                       await flushEncryptedPersistence();
                       await flushStorage();
                       setVaultKey(null);
+                      // Logout must NOT clear application data. It only re-arms
+                      // the persistence gates so the next unlock re-hydrates.
+                      resetVaultPersistence();
                       await logVaultDataMetadata('after-logout');
                       navigate('/lock');
                     })();

@@ -1,7 +1,8 @@
 import { Preferences } from '@capacitor/preferences';
 import { Capacitor } from '@capacitor/core';
 
-const isNative = Capacitor.isPluginAvailable('Preferences');
+const isNativePlatform = Capacitor.isNativePlatform();
+const isNative = Capacitor.isPluginAvailable('Preferences') && isNativePlatform;
 
 const DEBUG = true;
 
@@ -48,14 +49,12 @@ function createLocalStorageAdapter(): StorageLike {
 
 function createNativeAdapter(): NativeStorageLike {
   const cache = new Map<string, string>();
-  let pendingWrites = Promise.resolve();
+  const inFlight = new Set<Promise<void>>();
 
-  const enqueue = (operation: () => Promise<void>): Promise<void> => {
-    const next = pendingWrites.then(operation, operation);
-    pendingWrites = next.catch((error) => {
-      logError('native write failed', error);
-    });
-    return next;
+  const track = (write: Promise<void>): Promise<void> => {
+    inFlight.add(write);
+    void write.catch(() => undefined).finally(() => inFlight.delete(write));
+    return write;
   };
 
   const adapter: NativeStorageLike = {
@@ -74,23 +73,38 @@ function createNativeAdapter(): NativeStorageLike {
       return null;
     },
     setItem: (key, value) => {
-      log('setItem(native)', key, `${value.length} chars`, 'queued');
+      // Update the read cache first so immediate reads see the new value.
       cache.set(key, value);
-      return enqueue(async () => {
+      log('setItem(native)', key, `${value.length} chars`, 'writing');
+
+      // Write DIRECTLY — no serialization queue. A queued write could still be
+      // pending when Android kills the process (swipe-away / force-close), which
+      // would silently lose the record. Rejections are propagated to the caller
+      // instead of being swallowed, so a failed write can never be mistaken for
+      // a successful save.
+      const write = (async () => {
         await Preferences.set({ key, value });
         log('setItem(native)', key, 'SUCCESS');
-      });
+      })();
+
+      return track(write);
     },
     removeItem: (key) => {
-      log('removeItem(native)', key, 'queued');
       cache.delete(key);
-      return enqueue(async () => {
+      log('removeItem(native)', key, 'removing');
+      const write = (async () => {
         await Preferences.remove({ key });
         log('removeItem(native)', key, 'SUCCESS');
-      });
+      })();
+      return track(write);
     },
   };
-  nativeAdapterFlush = () => pendingWrites;
+
+  nativeAdapterFlush = async () => {
+    while (inFlight.size > 0) {
+      await Promise.allSettled([...inFlight]);
+    }
+  };
   return adapter;
 }
 

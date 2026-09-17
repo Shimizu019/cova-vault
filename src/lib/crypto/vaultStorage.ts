@@ -142,28 +142,95 @@ export async function encryptPayload(plaintext: string): Promise<string> {
   return result;
 }
 
+/** The blob shape written by encryptPayload(). */
+interface EncryptedPayload {
+  iv: string;
+  data: string;
+}
+
+function isEncryptedPayload(value: unknown): value is EncryptedPayload {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.iv === 'string' && typeof candidate.data === 'string';
+}
+
+/**
+ * Decrypt a blob produced by encryptPayload().
+ *
+ * CRITICAL: this THROWS on failure and must never return its input.
+ *
+ * The previous implementation ended with `catch { return encrypted }`. That
+ * "safe fallback" is what hid the persistence bug for several releases: callers
+ * received ciphertext (or, in the broken rehydrate path, an un-decrypted Zustand
+ * persist envelope), treated it as plaintext, and silently fell back to an empty
+ * store — which the persist middleware then wrote back over the real data.
+ *
+ * Callers that want a non-throwing read must catch explicitly (see
+ * vaultStorage.getItem, which returns null, and readStoreEnvelope below).
+ */
 export async function decryptPayload(encrypted: string): Promise<string> {
   if (!vaultKey) {
     throw new Error('Vault is locked');
   }
 
   log('decryptPayload: decrypting', `${encrypted.length} chars`);
+
+  let parsed: unknown;
   try {
-    const payload = JSON.parse(encrypted);
-    const iv = base64ToBuffer(payload.iv);
-    const data = base64ToBuffer(payload.data);
-    const decrypted = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: iv.buffer as ArrayBuffer },
-      vaultKey,
-      data.buffer as ArrayBuffer
-    );
-    const result = new TextDecoder().decode(decrypted);
-    log('decryptPayload: success', `${result.length} chars`);
-    return result;
-  } catch (err) {
-    logError('decryptPayload: failed', err);
-    return encrypted;
+    parsed = JSON.parse(encrypted);
+  } catch {
+    throw new Error('decryptPayload: stored value is not a JSON payload');
   }
+
+  if (!isEncryptedPayload(parsed)) {
+    throw new Error('decryptPayload: stored value is missing "iv"/"data" (not an encrypted blob)');
+  }
+
+  const iv = base64ToBuffer(parsed.iv);
+  const data = base64ToBuffer(parsed.data);
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: iv.buffer as ArrayBuffer },
+    vaultKey,
+    data.buffer as ArrayBuffer
+  );
+  const result = new TextDecoder().decode(decrypted);
+  log('decryptPayload: success', `${result.length} chars`);
+  return result;
+}
+
+/** The envelope written by Zustand's persist middleware. */
+export interface PersistEnvelope<T = Record<string, unknown>> {
+  state: T;
+  version?: number;
+}
+
+/**
+ * Read + decrypt + unwrap one persisted store blob from native storage.
+ *
+ * Returns the INNER state object (what the store's `partialize()` produced) and
+ * never the `{ state, version }` envelope. Throws if the blob is missing, cannot
+ * be decrypted, or is not a persist envelope — the caller decides how to report
+ * that, and no caller may silently substitute default data.
+ */
+export async function readStoreEnvelope(key: string): Promise<PersistEnvelope | null> {
+  const raw = storage.getItem(key);
+  if (!raw) return null;
+
+  const plaintext = await decryptPayload(raw);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(plaintext);
+  } catch {
+    throw new Error(`readStoreEnvelope: ${key} did not decrypt to valid JSON`);
+  }
+
+  const envelope = parsed as PersistEnvelope;
+  if (!envelope || typeof envelope !== 'object' || !envelope.state || typeof envelope.state !== 'object') {
+    throw new Error(`readStoreEnvelope: ${key} has no "state" object — blob is not a persist envelope`);
+  }
+
+  return envelope;
 }
 
 export const vaultStorage: VaultStorageEngine = {

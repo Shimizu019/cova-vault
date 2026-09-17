@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { setVaultKey } from '@lib/crypto/vaultStorage';
 import { useSettingsStore } from '@store';
 import { flushStorage } from '@lib/storage/storage';
+import { resetVaultPersistence } from '@lib/storage/vaultPersistence';
 import { flushEncryptedPersistence } from '@lib/crypto/encryptedStorage';
 
 const MIN_TIMEOUT = 60 * 1000;
@@ -30,6 +31,9 @@ export function useAutoLock() {
         await flushEncryptedPersistence();
         await flushStorage();
         setVaultKey(null);
+        // Re-arm the persistence gates so the next unlock must hydrate before
+        // it is allowed to write (never overwrite saved data with defaults).
+        resetVaultPersistence();
         navigate('/lock');
       })();
     };

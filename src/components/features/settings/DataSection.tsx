@@ -2,6 +2,7 @@ import { Database, Download, Upload, Trash2 } from 'lucide-react';
 import { Button } from '@components/ui/Button';
 import { useCredentialStore, useSettingsStore, useNoteStore, useUIStore, useActivityStore, useTaskStore, useWalletStore, useSavingsStore } from '@store';
 import { setVaultKey } from '@lib/crypto/vaultStorage';
+import { resetVaultPersistence } from '@lib/storage/vaultPersistence';
 import { exportEncryptedBackup, importEncryptedBackup } from '@lib/crypto/backup';
 import { purgeVaultData } from '@lib/crypto/vaultStorage';
 
@@ -86,6 +87,9 @@ export function DataSection() {
     if (confirm('Delete ALL data? This cannot be undone.')) {
       setVaultKey(null);
       purgeVaultData();
+      // Re-arm the persistence gates: with the vault key gone every store write
+      // is blocked anyway, and the reload below will require a fresh hydration.
+      resetVaultPersistence();
       useCredentialStore.getState().credentials = [];
       useCredentialStore.getState().folders = [];
       useNoteStore.getState().notes = [];

@@ -185,10 +185,15 @@ jobs:
 
           🔧 What's New in ${{ env.TAG }}
           ${CHANGELOG}
+          ⚠️ Persistence verification
+          The five-store regression passes with real stores and encryption across separate Node processes using mock Capacitor Preferences. Hydration preserves the saved blobs. Android native storage and the installed APK force-close test have NOT yet been verified on a real device. Back up important data before testing; previously overwritten records may not be recoverable.
+
           ⚠️ Beta Notice
           This is a beta release, so some features may not be fully finished yet. You may experience bugs, missing features, or changes in future updates. Please report any issues you find so we can make Cova Vault better!
           EOF
-          gh release create "$TAG" --title "$TAG" -F release-notes.md 2>&1
+          RELEASE_FLAGS=()
+          if [[ "$TAG" == *-beta* ]]; then RELEASE_FLAGS+=(--prerelease); fi
+          gh release create "$TAG" --title "$TAG" -F release-notes.md "${RELEASE_FLAGS[@]}" 2>&1
 
           echo "3. Uploading web build..."
           gh release upload "$TAG" cova-vault.zip --clobber 2>&1
