@@ -159,7 +159,9 @@ jobs:
           gh release delete "$TAG" --yes 2>&1 || echo "No existing release to delete (expected)"
 
           echo "2. Creating new release..."
-          cat > release-notes.md << 'EOF'
+          # NOTE: heredoc delimiter must be UNQUOTED so ${CHANGELOG} expands
+          # into the real release notes (quoted 'EOF' writes the placeholder literally).
+          cat > release-notes.md << EOF
           🚀 Welcome to Cova Vault ${{ env.TAG }}
           This is a beta testing release of Cova Vault — a secure, all-in-one personal vault app where you can keep your passwords, notes, tasks, finances, savings goals, and more in one organized place.
 
