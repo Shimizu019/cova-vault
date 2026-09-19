@@ -10,6 +10,17 @@ import type { WalletRecord } from '@lib/types';
 
 const EXPENSE_CATS = ['Food', 'Transportation', 'School', 'Bills', 'Shopping', 'Entertainment', 'Health', 'Other'];
 const INCOME_CATS = ['Salary', 'Allowance', 'Gift', 'Refund', 'Freelance', 'Other'];
+/** Category-specific Description examples for the Add Expense form (used as the Description placeholder) */
+const CAT_DESCRIPTION_EXAMPLES: Record<string, string> = {
+  Food: 'e.g. Burger, Fried Chicken, Rice, Coffee',
+  Transportation: 'e.g. Jeep, Tricycle, Bus, Taxi, UV Express, Motorcycle',
+  School: 'e.g. Notebook, Pens, School Supplies',
+  Bills: 'e.g. Electricity, Water, Internet',
+  Shopping: 'e.g. Clothes, Shoes, Load',
+  Entertainment: 'e.g. Movie, Games, Milk Tea',
+  Health: 'e.g. Medicine, Vitamins, Check-up',
+  Other: 'e.g. Gift, Donation, Misc',
+};
 
 export function Wallet() {
   const {
@@ -219,12 +230,20 @@ export function Wallet() {
             <button type="button" onClick={() => { setFormType('expense'); setDCat('Food'); }} className={'flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors ' + (formType === 'expense' ? 'border-cova-danger bg-cova-danger/15 text-cova-danger' : 'border-cova-border bg-cova-bg text-cova-textSecondary')}><TrendingDown className="w-4 h-4 inline mr-1" /> Expense</button>
             <button type="button" onClick={() => { setFormType('income'); setDCat('Allowance'); }} className={'flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors ' + (formType === 'income' ? 'border-cova-success bg-cova-success/15 text-cova-success' : 'border-cova-border bg-cova-bg text-cova-textSecondary')}><TrendingUp className="w-4 h-4 inline mr-1" /> Income</button>
           </div>
-          <div><label className="label">Description</label><Input value={dDesc} onChange={(e) => setDDesc(e.target.value)} placeholder={formType === 'expense' ? 'e.g. Burger' : 'e.g. Allowance'} autoFocus /></div>
-          <div><label className="label">Amount (₱)</label><Input type="number" min="0" step="0.01" value={dAmt} onChange={(e) => setDAmt(e.target.value)} placeholder="0.00" /></div>
-          {formType === 'expense' && (
-            <div><label className="label">Cash Given (optional)</label><Input type="number" min="0" step="0.01" value={dCash} onChange={(e) => setDCash(e.target.value)} placeholder="0.00" />{dCash && parseFloat(dAmt) > 0 && <div className="mt-2 p-3 bg-cova-surface rounded-lg"><div className="flex justify-between text-sm"><span className="text-cova-textMuted">Change:</span><span className="font-medium text-cova-text">{formatPHP(change)}</span></div></div>}</div>
+          {formType === 'expense' ? (
+            <>
+              <div><label className="label">Category</label><select value={dCat} onChange={(e) => setDCat(e.target.value)} className="input w-full">{EXPENSE_CATS.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
+              <div><label className="label">Description</label><Input value={dDesc} onChange={(e) => setDDesc(e.target.value)} placeholder={CAT_DESCRIPTION_EXAMPLES[dCat] ?? 'e.g. Expense description'} autoFocus /></div>
+              <div><label className="label">Price {dCat}</label><Input type="number" min="0" step="0.01" value={dAmt} onChange={(e) => setDAmt(e.target.value)} placeholder="0.00" /></div>
+              <div><label className="label">Cash Given (optional)</label><Input type="number" min="0" step="0.01" value={dCash} onChange={(e) => setDCash(e.target.value)} placeholder="0.00" />{dCash && parseFloat(dAmt) > 0 && <div className="mt-2 p-3 bg-cova-surface rounded-lg"><div className="flex justify-between text-sm"><span className="text-cova-textMuted">Change:</span><span className="font-medium text-cova-text">{formatPHP(change)}</span></div></div>}</div>
+            </>
+          ) : (
+            <>
+              <div><label className="label">Description</label><Input value={dDesc} onChange={(e) => setDDesc(e.target.value)} placeholder="e.g. Allowance" autoFocus /></div>
+              <div><label className="label">Amount (₱)</label><Input type="number" min="0" step="0.01" value={dAmt} onChange={(e) => setDAmt(e.target.value)} placeholder="0.00" /></div>
+              <div><label className="label">Category</label><select value={dCat} onChange={(e) => setDCat(e.target.value)} className="input w-full">{INCOME_CATS.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
+            </>
           )}
-          <div><label className="label">Category</label><select value={dCat} onChange={(e) => setDCat(e.target.value)} className="input w-full">{(formType === 'expense' ? EXPENSE_CATS : INCOME_CATS).map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
           <div className="grid grid-cols-2 gap-3"><div><label className="label">Date</label><Input type="date" value={dDate} onChange={(e) => setDDate(e.target.value)} /></div><div><label className="label">Time</label><Input type="time" value={dTime} onChange={(e) => setDTime(e.target.value)} /></div></div>
           <div><label className="label">Note (optional)</label><Input value={dNote} onChange={(e) => setDNote(e.target.value)} placeholder="Add a note..." /></div>
         </div>
