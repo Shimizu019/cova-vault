@@ -234,7 +234,7 @@ jobs:
           fi
           RELEASE_FLAGS=()
           if [[ "$TAG" == *-beta* ]]; then RELEASE_FLAGS+=(--prerelease); fi
-          gh release create "$TAG" --title "$TAG" -F release-notes.md "${RELEASE_FLAGS[@]}" 2>&1
+          gh release create "$TAG" --title "Cova $TAG" -F release-notes.md "${RELEASE_FLAGS[@]}" 2>&1
 
           echo "3. Uploading web build..."
           gh release upload "$TAG" cova-vault.zip --clobber 2>&1
