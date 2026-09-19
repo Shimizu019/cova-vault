@@ -137,7 +137,7 @@ jobs:
               CHANGELOG+=$'\n- APK versionCode/versionName now stamped from the release tag in CI'
               CHANGELOG+=$'\n- Fixed mojibake characters in Wallet (₱ peso sign, · separator)'
               ;;
-            v1.0.0)
+            v0.1.0)
               CHANGELOG="PeraLog: category-specific Add Expense form"
               CHANGELOG+=$'\n- Category is now the first field when adding an Expense transaction'
               CHANGELOG+=$'\n- Description examples adapt to the selected category (Food: Burger, Fried Chicken, Rice, Coffee; Transportation: Jeep, Tricycle, Bus, Taxi, UV Express, Motorcycle; plus examples for every other expense category)'
