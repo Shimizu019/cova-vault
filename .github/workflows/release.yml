@@ -3,13 +3,13 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to release (e.g. v0.1.0-beta)'
+        description: "Tag to release (e.g. v0.1.0-beta)"
         required: true
-        default: 'v0.1.0-beta'
+        default: "v0.1.0-beta"
 
 permissions:
   contents: write
@@ -24,8 +24,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
 
       - run: npm ci
       - run: npm run build
@@ -36,8 +36,8 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: "temurin"
+          java-version: "21"
 
       - name: Download JAXB for Java 11+ compatibility
         run: |
@@ -53,7 +53,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools build-tools;36.0.0 platforms;android-36'
+          packages: "platform-tools build-tools;36.0.0 platforms;android-36"
 
       - name: Sync Capacitor
         run: npx cap sync android
