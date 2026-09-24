@@ -44,5 +44,13 @@ out
 /local.properties
 /.cxx/
 
+# Android signing material — never commit keys or passwords
+*.keystore
+*.jks
+*.p12
+*.pfx
+keystore.properties
+android/keystore.properties
+
 # Kilo Code worktrees
 .kilo/

@@ -1,17 +1,95 @@
 apply plugin: 'com.android.application'
 
-// Build identity — CI exports COVA_VERSION_NAME (release tag, e.g. 0.1.8-beta)
-// and COVA_VERSION_CODE (GitHub run number) so installed builds are
-// distinguishable on the device. Local builds fall back to defaults.
-def covaVersionName = System.getenv("COVA_VERSION_NAME") ?: "1.0"
-def covaVersionCode = 1
-if (System.getenv("COVA_VERSION_CODE")) {
-    try {
-        covaVersionCode = Integer.parseInt(System.getenv("COVA_VERSION_CODE"))
-    } catch (Exception ignored) {
-        covaVersionCode = 1
+// ---------------------------------------------------------------------------
+// Cova Vault build identity
+// ---------------------------------------------------------------------------
+// Android only treats an APK as an UPDATE of an installed app when all three
+// match: the same applicationId, a strictly GREATER versionCode, and the same
+// signing certificate.
+//
+// COVA_VERSION_NAME / COVA_VERSION_CODE are supplied explicitly by CI, which
+// resolves them from the release tag via scripts/android-version.mjs
+// (v0.1.9-beta -> versionName "0.1.9-beta", versionCode 109).
+//
+// Local development builds fall back to 0.0.0-dev / versionCode 1. A build
+// marked as a release (COVA_REQUIRE_RELEASE_SIGNING=1) never falls back: it
+// fails loudly instead of silently shipping versionCode 1, which Android would
+// refuse to install over an older release.
+// ---------------------------------------------------------------------------
+
+def covaRequireReleaseSigning = (System.getenv("COVA_REQUIRE_RELEASE_SIGNING") ?: "0").trim() == "1"
+
+def covaRawVersionName = (System.getenv("COVA_VERSION_NAME") ?: project.findProperty("covaVersionName"))?.toString()?.trim()
+def covaRawVersionCode = (System.getenv("COVA_VERSION_CODE") ?: project.findProperty("covaVersionCode"))?.toString()?.trim()
+
+// --- versionName -----------------------------------------------------------
+def covaVersionName = covaRawVersionName
+if (!covaVersionName) {
+    if (covaRequireReleaseSigning) {
+        throw new GradleException(
+            "COVA_VERSION_NAME is required for release builds (example: COVA_VERSION_NAME=0.1.9-beta)."
+        )
+    }
+    covaVersionName = "0.0.0-dev"
+}
+
+// --- versionCode -----------------------------------------------------------
+def covaVersionCode = null
+if (covaRawVersionCode) {
+    if (!(covaRawVersionCode ==~ /\d+/)) {
+        throw new GradleException("COVA_VERSION_CODE must be a positive integer, but got '${covaRawVersionCode}'.")
+    }
+    covaVersionCode = covaRawVersionCode.toInteger()
+    if (covaVersionCode < 1) {
+        throw new GradleException("COVA_VERSION_CODE must be >= 1, but got ${covaVersionCode}.")
+    }
+} else if (!covaRequireReleaseSigning) {
+    // Local development fallback only.
+    covaVersionCode = 1
+}
+
+if (covaVersionCode == null) {
+    throw new GradleException(
+        "COVA_VERSION_CODE is required for release builds and must be >= 1. Refusing to fall " +
+        "back to versionCode 1 because Android would reject the APK as an update. Resolve it with: " +
+        "node scripts/android-version.mjs --name ${covaVersionName}"
+    )
+}
+
+// --- release signing -------------------------------------------------------
+// Every released APK must be signed with the same persistent certificate.
+// Values come from the environment (CI maps them from GitHub secrets); no key
+// material or password is stored in the repository.
+def covaKeystorePath = System.getenv("COVA_KEYSTORE_PATH")?.trim()
+def covaKeystorePassword = System.getenv("COVA_KEYSTORE_PASSWORD")
+def covaKeyAlias = System.getenv("COVA_KEY_ALIAS")?.trim()
+def covaKeyPassword = System.getenv("COVA_KEY_PASSWORD")
+
+def covaHasReleaseSigning = [covaKeystorePath, covaKeystorePassword, covaKeyAlias, covaKeyPassword]
+        .every { it != null && it.toString().trim().length() > 0 }
+
+if (covaRequireReleaseSigning && !covaHasReleaseSigning) {
+    throw new GradleException(
+        "Release signing is required but not configured. Set COVA_KEYSTORE_PATH, " +
+        "COVA_KEYSTORE_PASSWORD, COVA_KEY_ALIAS and COVA_KEY_PASSWORD (GitHub secrets: " +
+        "ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, " +
+        "ANDROID_KEY_PASSWORD). Release APKs must not be debug-signed: the Android debug " +
+        "keystore is regenerated per machine and per CI run, which is what breaks APK updates."
+    )
+}
+
+def covaKeystoreFile = null
+if (covaHasReleaseSigning) {
+    covaKeystoreFile = new File(covaKeystorePath)
+    if (!covaKeystoreFile.isAbsolute()) {
+        covaKeystoreFile = rootProject.file(covaKeystorePath)
+    }
+    if (!covaKeystoreFile.exists()) {
+        throw new GradleException("COVA_KEYSTORE_PATH does not exist: ${covaKeystoreFile}")
     }
 }
+
+println "[cova] versionName=${covaVersionName} versionCode=${covaVersionCode} releaseSigning=${covaHasReleaseSigning}"
 
 android {
     namespace = "com.cova.vault"
@@ -29,10 +107,25 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (covaHasReleaseSigning) {
+            release {
+                storeFile covaKeystoreFile
+                storePassword covaKeystorePassword
+                keyAlias covaKeyAlias
+                keyPassword covaKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (covaHasReleaseSigning) {
+                // Sign every released APK with the persistent Cova Vault release
+                // certificate so Android recognises it as an update of older builds.
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

@@ -12,8 +12,8 @@ export function AccountSection() {
   const { addToast } = useUIStore();
   const navigate = useNavigate();
 
-  // Master-password change form (separate from the auto-save above because
-  // it has validation, confirmation, and a click-to-save action).
+  // Master-password change form (kept separate from the profile draft because
+  // it has validation, confirmation, and its own click-to-save action).
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordErr, setPasswordErr] = useState<string | null>(null);
@@ -34,12 +34,12 @@ export function AccountSection() {
     draft.email !== user.email ||
     draft.avatarUrl !== user.avatarUrl;
 
-    // Update draft when inputs change
+  // Update the draft when inputs change (the store is untouched until save)
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => setDraft(prev => ({ ...prev, name: e.target.value }));
   const handleDisplayNameChange = (e: React.ChangeEvent<HTMLInputElement>) => setDraft(prev => ({ ...prev, displayName: e.target.value }));
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => setDraft(prev => ({ ...prev, email: e.target.value }));
 
-    // Save changes to store
+  // Commit the draft to the store (only called by the Save Changes button)
   const handleSaveChanges = async () => {
     try {
       const updates: Partial<typeof user> = {};
@@ -108,10 +108,11 @@ export function AccountSection() {
       <div className="p-5 space-y-5">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-xl flex items-center justify-center overflow-hidden">
-            {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt="User avatar" className="w-full h-full object-cover" />
+            {/* Preview the draft so a staged picture / name is visible before saving */}
+            {draft.avatarUrl ? (
+              <img src={draft.avatarUrl} alt="User avatar" className="w-full h-full object-cover" />
             ) : (
-              getInitials(user.displayName)
+              getInitials(draft.displayName)
             )}
           </div>
           <button
@@ -136,7 +137,7 @@ export function AccountSection() {
                 reader.onload = (ev) => {
                   const url = ev.target?.result as string;
                   setDraft(prev => ({ ...prev, avatarUrl: url }));
-                  addToast('Avatar updated', 'success');
+                  addToast('Profile picture staged — click Save Changes', 'success', 2000);
                 };
                 reader.readAsDataURL(file);
               };
