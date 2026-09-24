@@ -148,67 +148,69 @@ jobs:
 
           echo "2. Creating new release..."
           if [[ "$TAG" == *-beta* ]]; then
-            cat > release-notes.md << 'EOF'
-🚀 Welcome to Cova Vault $TAG
-This is a beta testing release of Cova Vault — a secure, all-in-one personal vault app where you can keep your passwords, notes, tasks, finances, savings goals, and more in one organized place.
-
-This beta build is being shared to test the app's features, check that everything is working smoothly, and discover any issues that still need to be fixed. Some features may still change or have bugs, and your feedback is very welcome!
-
-📌 What is Cova Vault?
-Cova Vault is a privacy-focused personal vault application designed to help you organize your daily life securely. It runs locally on your device with no cloud sync required, keeping your data in your own hands.
-
-✨ Main Features
-🔐 Credentials — Store and manage your passwords securely
-📝 Notes — Keep quick notes, ideas, and references
-✅ Tasks — Track your to-dos and schedules
-💰 PeraLog (Finance) — Track income, expenses, budgets, and balance
-🎯 Savings — Set savings goals and monitor your progress
-📁 Folders — Organize everything with easy navigation
-⭐ Favorites — Quick access to your most-used items
-📅 Calendar & Schedule — Keep track of dates and deadlines
-🔑 Password Generator — Create strong, secure passwords
-📊 Activity Log — See everything happening in your vault
-📱 Mobile-Ready — Works great on phones and tablets
-
-🔧 What's New in $TAG
-$CHANGELOG
-⚠️ Persistence verification
-The five-store regression passes with real stores and encryption across separate Node processes using mock Capacitor Preferences. Hydration preserves the saved blobs. Android native storage and the installed APK force-close test have NOT yet been verified on a real device. Back up important data before testing; previously overwritten records may not be recoverable.
-
-⚠️ Beta Notice
-This is a beta release, so some features may not be fully finished yet. You may experience bugs, missing features, or changes in future updates. Please report any issues you find so we can make Cova Vault better!
-EOF
+            {
+              echo "Welcome to Cova Vault $TAG"
+              echo "This is a beta testing release of Cova Vault: a secure, all-in-one personal vault app for passwords, notes, tasks, finances, savings goals, and more."
+              echo ""
+              echo "This beta build is being shared to test features and find remaining issues. Some features may still change."
+              echo ""
+              echo "What is Cova Vault?"
+              echo "Cova Vault is a privacy-focused personal vault application. It runs locally on your device with no cloud sync required."
+              echo ""
+              echo "Main Features"
+              echo "- Credentials: store and manage passwords securely"
+              echo "- Notes: keep quick notes, ideas, and references"
+              echo "- Tasks: track to-dos and schedules"
+              echo "- PeraLog (Finance): track income, expenses, budgets, and balance"
+              echo "- Savings: set savings goals and monitor progress"
+              echo "- Folders: organize everything with easy navigation"
+              echo "- Favorites: quick access to most-used items"
+              echo "- Calendar and Schedule: keep track of dates and deadlines"
+              echo "- Password Generator: create strong, secure passwords"
+              echo "- Activity Log: see everything happening in your vault"
+              echo "- Mobile-Ready: works on phones and tablets"
+              echo ""
+              echo "What is New in $TAG"
+              echo "$CHANGELOG"
+              echo ""
+              echo "Persistence verification"
+              echo "The five-store regression passes with real stores and encryption across separate Node processes using mock Capacitor Preferences. Android native storage and the installed APK force-close test have NOT yet been verified on a real device."
+              echo ""
+              echo "Beta Notice"
+              echo "This is a beta release. Please report any issues you find."
+            } > release-notes.md
           else
-            cat > release-notes.md << 'EOF'
-🎉 Cova Vault $TAG — Official Release
-The first stable, official release of Cova Vault — a secure, all-in-one personal vault app where you can keep your passwords, notes, tasks, finances, savings goals, and more in one organized place.
-
-After several beta iterations, Cova Vault is now ready for everyday use. Thank you to everyone who tested the beta builds and shared feedback!
-
-📌 What is Cova Vault?
-Cova Vault is a privacy-focused personal vault application designed to help you organize your daily life securely. It runs locally on your device with no cloud sync required, keeping your data in your own hands.
-
-✨ Main Features
-🔐 Credentials — Store and manage your passwords securely
-📝 Notes — Keep quick notes, ideas, and references
-✅ Tasks — Track your to-dos and schedules
-💰 PeraLog (Finance) — Track income, expenses, budgets, and balance
-🎯 Savings — Set savings goals and monitor your progress
-📁 Folders — Organize everything with easy navigation
-⭐ Favorites — Quick access to your most-used items
-📅 Calendar & Schedule — Keep track of dates and deadlines
-🔑 Password Generator — Create strong, secure passwords
-📊 Activity Log — See everything happening in your vault
-📱 Mobile-Ready — Works great on phones and tablets
-
-🔧 What's New in $TAG
-$CHANGELOG
-📥 Downloads
-cova-vault.zip — Web build (host it on any static server)
-app-CovaVault-$TAG.apk — Android app
-
-🙏 Thank you for using Cova Vault! Please report any issues you find so we can keep improving the app.
-EOF
+            {
+              echo "Cova Vault $TAG: Official Release"
+              echo "A secure, all-in-one personal vault app for passwords, notes, tasks, finances, savings goals, and more."
+              echo ""
+              echo "After several beta iterations, Cova Vault is now ready for everyday use. Thank you to everyone who tested the beta builds."
+              echo ""
+              echo "What is Cova Vault?"
+              echo "Cova Vault is a privacy-focused personal vault application. It runs locally on your device with no cloud sync required."
+              echo ""
+              echo "Main Features"
+              echo "- Credentials: store and manage passwords securely"
+              echo "- Notes: keep quick notes, ideas, and references"
+              echo "- Tasks: track to-dos and schedules"
+              echo "- PeraLog (Finance): track income, expenses, budgets, and balance"
+              echo "- Savings: set savings goals and monitor progress"
+              echo "- Folders: organize everything with easy navigation"
+              echo "- Favorites: quick access to most-used items"
+              echo "- Calendar and Schedule: keep track of dates and deadlines"
+              echo "- Password Generator: create strong, secure passwords"
+              echo "- Activity Log: see everything happening in your vault"
+              echo "- Mobile-Ready: works on phones and tablets"
+              echo ""
+              echo "What is New in $TAG"
+              echo "$CHANGELOG"
+              echo ""
+              echo "Downloads"
+              echo "- cova-vault.zip: web build (host it on any static server)"
+              echo "- app-CovaVault-$TAG.apk: Android app"
+              echo ""
+              echo "Thank you for using Cova Vault! Please report any issues you find."
+            } > release-notes.md
           fi
 
           RELEASE_FLAGS=()
