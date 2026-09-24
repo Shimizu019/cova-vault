@@ -30,6 +30,7 @@
   - [Folder / Item Relationship](#folder--item-relationship)
   - [PeraLog (Wallet)](#peralog-wallet)
 - [Scripts](#scripts)
+- [Git Branch Strategy](#git-branch-strategy)
 - [License](#license)
 
 ---
@@ -223,6 +224,68 @@ income totals to avoid double-counting.
 | `npm run build` | Type-check (`tsc -b`) and build |
 | `npm run lint` | Run Oxlint |
 | `npm run preview` | Serve the production build locally |
+
+## Git Branch Strategy
+
+### main
+
+The `main` branch contains the official stable version of Cova Vault.
+
+Only tested and release-ready code should be merged into `main`, through a pull
+request after the beta release process below has passed. `main` is never used as
+a development branch.
+
+### Beta-Release.apk
+
+The `Beta-Release.apk` branch is the beta, development, and testing branch. It
+hosts bug fixes, new features, UI improvements, Android build fixes, persistence
+fixes, security fixes, release-candidate preparation, and beta testing. Changes
+are tested here before they become part of an official release.
+
+New work is developed on branches cut from `Beta-Release.apk`:
+
+- `feature/*` — new features (e.g. `feature/new-calendar`, `feature/backup-system`)
+- `bugfix/*` — bug fixes (e.g. `bugfix/credential-persistence`)
+- `fix/*` — targeted fixes (e.g. `bugfix/android-signing`)
+
+Unfinished features and fixes stay in beta and are **not** merged into `main`.
+
+### Development Flow
+
+```text
+feature/*   bugfix/*   fix/*
+     │          │         │
+     └──────────┼─────────┘
+                ▼
+      Beta-Release.apk
+                │
+          Beta testing
+                │
+  Final verification / release candidate
+                │
+                ▼
+              main
+                │
+                ▼
+     Official Release (vX.Y.Z)
+```
+
+Promotion from `Beta-Release.apk` to `main` happens only after: tests, lint,
+production build, Android build verification, persistence/authentication/settings/
+responsive-UI checks, and final review — via pull request.
+
+Versioning: beta releases are tagged from beta-tested commits as `vX.Y.Z-beta.N`;
+the stable tag `vX.Y.Z` is cut only from `main`. Existing tags and GitHub releases
+are never deleted, moved, or rewritten.
+
+### Continuous Integration
+
+- `.github/workflows/ci.yml` — `lint` and `build` jobs on every push and pull
+  request targeting `main` or `Beta-Release.apk`.
+- `.github/workflows/release.yml` — Android release build, APK identity/signing
+  verification, and GitHub Release publication. Triggered only by pushing a `v*`
+  tag (beta or stable) or by manual dispatch with a tag input; it does not run on
+  branch pushes.
 
 ## License
 
