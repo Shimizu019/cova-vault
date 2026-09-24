@@ -145,6 +145,14 @@ jobs:
               CHANGELOG+=$'\n- Cash Given, Date, Time, Note, balance calculations, history, and the Income form are unchanged'
               CHANGELOG+=$'\n- First stable, official release of Cova Vault'
               ;;
+            v0.1.1)
+              CHANGELOG="Account/Profile: explicit Save Changes flow (no more auto-save while editing)"
+              CHANGELOG+=$'\n- Name, Display Name, Email, and Profile Picture now edit a temporary draft instead of updating the saved account on every keystroke'
+              CHANGELOG+=$'\n- Added a Save Changes button; the saved account only updates after the user clicks it'
+              CHANGELOG+=$'\n- The button is disabled and shows "No Changes" when there are no unsaved edits'
+              CHANGELOG+=$'\n- Avatar selection now stages into the draft and commits together with the other fields on save'
+              CHANGELOG+=$'\n- Master-password change flow is unchanged and stays separate'
+              ;;
             *)
               CHANGELOG="Bug fixes and improvements"
               ;;
