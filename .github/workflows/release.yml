@@ -67,7 +67,7 @@ jobs:
       - name: Resolve Android version
         id: android_version
         run: |
-          TAG="${{ github.ref_name || inputs.tag }}"
+          TAG="${{ inputs.tag || github.ref_name }}"
           if [ -z "$TAG" ]; then
             echo "::error::No release tag available; cannot derive the Android version."
             exit 1
@@ -84,16 +84,32 @@ jobs:
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
+          set -euo pipefail
+
           if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
-            echo "::error::Missing GitHub secret ANDROID_KEYSTORE_BASE64. Release APKs must be signed with the persistent Cova Vault release keystore (see docs/android-release-signing.md); debug signing is regenerated per CI run and breaks APK updates."
+            echo "::error::Missing GitHub secret ANDROID_KEYSTORE_BASE64. Release APKs must be signed with the persistent Cova Vault release keystore (see docs/android-release-signing.md)."
             exit 1
           fi
+
+          NORMALIZED_BASE64="$(printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '\r\n[:space:]')"
+
+          if ! printf '%s' "$NORMALIZED_BASE64" | grep -Eq '^[A-Za-z0-9+/]*={0,2}$'; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is malformed. Paste only the Base64-encoded keystore contents, with no shell commands or extra text."
+            exit 1
+          fi
+
           KEYSTORE_PATH="$RUNNER_TEMP/cova-release.keystore"
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
+
+          if ! printf '%s' "$NORMALIZED_BASE64" | base64 --decode --ignore-garbage > "$KEYSTORE_PATH"; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 could not be decoded as Base64. Generate it with: base64 -w 0 cova-release.keystore"
+            exit 1
+          fi
+
           if [ ! -s "$KEYSTORE_PATH" ]; then
             echo "::error::Decoded release keystore is empty."
             exit 1
           fi
+
           echo "keystore_path=$KEYSTORE_PATH" >> "$GITHUB_OUTPUT"
         shell: bash
 
@@ -132,19 +148,23 @@ jobs:
 
       - name: Set APK path
         id: find_apk
-        if: always()
+        if: steps.build_apk.outcome == 'success'
         run: |
           APK_PATH=$(find android/app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1 || true)
           if [ -z "$APK_PATH" ]; then
             APK_PATH=$(find android -path '*outputs/apk/release*' -name '*.apk' -type f 2>/dev/null | head -1 || true)
           fi
-          echo "apk_path=${APK_PATH:-}" >> "$GITHUB_OUTPUT"
+          if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
+            echo "::error::Build succeeded but no release APK was produced."
+            exit 1
+          fi
+          echo "apk_path=${APK_PATH}" >> "$GITHUB_OUTPUT"
         shell: bash
 
       # Guards the update preconditions before anything is published:
       # applicationId, versionName/versionCode, and the signing certificate.
       - name: Verify APK identity
-        if: always()
+        if: steps.build_apk.outcome == 'success' && steps.find_apk.outcome == 'success'
         run: |
           APK_PATH="${{ steps.find_apk.outputs.apk_path }}"
           EXPECTED_NAME="${{ steps.android_version.outputs.versionName }}"
@@ -153,16 +173,19 @@ jobs:
             echo "::error::Release APK was not produced; refusing to publish a release without it."
             exit 1
           fi
+
           echo "=== APK: $APK_PATH ==="
           BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort -V | tail -1)
           APKSIGNER="$BUILD_TOOLS/apksigner"
           AAPT="$BUILD_TOOLS/aapt"
           if [ ! -x "$AAPT" ]; then AAPT="$BUILD_TOOLS/aapt2"; fi
           if [ ! -x "$AAPT" ]; then AAPT="$(command -v aapt || true)"; fi
+
           BADGING=""
           if [ -n "$AAPT" ] && [ -x "$AAPT" ]; then
             BADGING=$("$AAPT" dump badging "$APK_PATH" 2>/dev/null || true)
           fi
+
           if [ -n "$BADGING" ]; then
             echo "$BADGING" | head -3
             echo "$BADGING" | grep -q "package: name='com.cova.vault'" || { echo "::error::APK applicationId is not com.cova.vault"; exit 1; }
@@ -171,35 +194,53 @@ jobs:
           else
             echo "::warning::No aapt/aapt2 available to read APK badging; skipped the metadata assertions."
           fi
+
           EXPECTED_CERT="${{ vars.ANDROID_RELEASE_CERT_SHA256 }}"
           if [ -z "$EXPECTED_CERT" ]; then
             echo "::error::Missing GitHub variable ANDROID_RELEASE_CERT_SHA256. Pin the production release certificate's SHA-256 fingerprint so CI proves every APK is signed by the same key (see docs/android-release-signing.md)."
             exit 1
           fi
+
+          if printf '%s' "$EXPECTED_CERT" | grep -Eiq 'keytool|apksigner|sha256|certificate'; then
+            echo "::error::ANDROID_RELEASE_CERT_SHA256 must be the certificate fingerprint only, not a command or shell snippet. Example: AB:CD:EF:...:FF"
+            exit 1
+          fi
+
+          if ! printf '%s' "$EXPECTED_CERT" | tr -d ':' | grep -Eq '^[A-Fa-f0-9]{64}$'; then
+            echo "::error::ANDROID_RELEASE_CERT_SHA256 must be a 64-hex SHA-256 fingerprint (colons optional). Found: $EXPECTED_CERT"
+            exit 1
+          fi
+
           if [ ! -x "$APKSIGNER" ]; then
             echo "::error::apksigner was not found in the Android SDK; cannot verify the release signature."
             exit 1
           fi
+
           echo "=== Signer certificate (must equal the previous release's certificate) ==="
           set +e
           "$APKSIGNER" verify --print-certs "$APK_PATH" > apksigner-report.txt 2>&1
           SIGNER_EXIT=$?
           set -e
           head -12 apksigner-report.txt
+
           if [ "$SIGNER_EXIT" -ne 0 ]; then
             echo "::error::apksigner rejected the APK (exit $SIGNER_EXIT): it is unsigned or the signature is invalid."
             exit 1
           fi
-          CERT_SHA=$(grep -i 'certificate SHA-256 digest' apksigner-report.txt | head -1 | awk '{print $NF}' | tr 'a-f' 'A-F')
+
+          CERT_SHA=$(grep -i 'certificate SHA-256 digest' apksigner-report.txt | head -1 | awk '{print $NF}' | tr 'a-f' 'A-F' || true)
           PINNED_SHA=$(printf '%s' "$EXPECTED_CERT" | tr -d ':' | tr 'a-f' 'A-F')
+
           if [ -z "$CERT_SHA" ]; then
             echo "::error::apksigner output did not contain a certificate SHA-256 digest; cannot verify the signing identity."
             exit 1
           fi
+
           if [ "$CERT_SHA" != "$PINNED_SHA" ]; then
             echo "::error::Signing certificate mismatch - APK is signed by $CERT_SHA but the pinned release certificate is $PINNED_SHA. Android would refuse this APK as an update."
             exit 1
           fi
+
           echo "Certificate matches the pinned release fingerprint ($CERT_SHA)."
         shell: bash
 
@@ -213,7 +254,7 @@ jobs:
       - name: Create GitHub Release
         if: success()
         run: |
-          TAG="${{ github.ref_name || inputs.tag }}"
+          TAG="${{ inputs.tag || github.ref_name }}"
           BUILD_EXIT="${{ steps.build_apk.outputs.build_exit_code }}"
           APK_PATH="${{ steps.find_apk.outputs.apk_path }}"
 
