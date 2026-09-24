@@ -96,70 +96,6 @@ jobs:
           echo "apk_path=${APK_PATH:-}" >> "$GITHUB_OUTPUT"
         shell: bash
 
-      - name: Generate changelog
-        id: changelog
-        if: always()
-        run: |
-          TAG="${{ github.ref_name || inputs.tag }}"
-          case "$TAG" in
-            v0.1.1-beta)
-              CHANGELOG="Fixed mobile storage initialization to prevent crashes"
-              CHANGELOG+=$'\nImproved configuration file formatting'
-              CHANGELOG+=$'\nUpdated APK naming to include the version tag'
-              ;;
-            v0.1.2-beta)
-              CHANGELOG="Fixed fire-and-forget writes in native storage adapter (Preferences.set was not awaited)"
-              CHANGELOG+=$'\nAdded fallback read from Capacitor Preferences if cache miss'
-              CHANGELOG+=$'\nFixed async getItem in authStorage and vaultStorage'
-              ;;
-            v0.1.3-beta)
-              CHANGELOG="Fixed critical persistence bugs causing data loss on app restart:"
-              CHANGELOG+=$'\n- Fire-and-forget writes in native storage (Preferences.set/remove now awaited)'
-              CHANGELOG+=$'\n- Missing await in vaultStorage.setItem, getOrCreateVaultSalt, setVaultSalt, reencryptVault'
-              CHANGELOG+=$'\n- Added comprehensive debug logging across storage, vaultStorage, encryptedPersist, and Lock rehydration'
-              CHANGELOG+=$'\n- Manual rehydrateStores() after vault unlock with detailed per-store logging'
-              CHANGELOG+=$'\n- Fixed store initialization timing: initStorage() now runs before any store imports via dynamic import'
-              ;;
-            v0.1.4-beta)
-              CHANGELOG="Fixed critical data persistence bug causing all user data (Credentials, Wallet, Savings, Notes, Tasks) to disappear after app restart:"
-              CHANGELOG+=$'\n- Root cause: Zustand persist middleware calls storage.setItem() synchronously, but native Capacitor Preferences writes were async and fire-and-forget'
-              CHANGELOG+=$'\n- Fix: Native storage adapter now synchronous with background write queue - caches immediately, queues Preferences.set() for async completion'
-              CHANGELOG+=$'\n- All 5 data stores (Credentials, Notes, Tasks, Wallet, Savings) now persist correctly across full app termination/restart'
-              CHANGELOG+=$'\n- Added comprehensive debug logging to trace: store name, key, save started/completed, item count, native write success/failure, encryption/decryption, rehydration'
-              ;;
-            v0.1.8-beta)
-              CHANGELOG="Persistence diagnostics: verify the save → logout → restart → unlock lifecycle on-device"
-              CHANGELOG+=$'\n- New Settings → Diagnostics section and standalone /diagnostics page reachable from the Lock screen'
-              CHANGELOG+=$'\n- 3-phase probe: Phase 1 writes sample data + logs out, Phase 2 verifies native storage after force-close (before unlock), Phase 3 verifies rehydration after unlock'
-              CHANGELOG+=$'\n- Stage-by-stage pass/fail for: native write, Preferences.read, decrypt, store rehydrate, UI display — with no secrets logged'
-              CHANGELOG+=$'\n- Raw Capacitor Preferences inspection table with presence/size/hash per storage key'
-              CHANGELOG+=$'\n- Build identity stamping: every APK/footer now shows version, build number, commit SHA, and build time'
-              CHANGELOG+=$'\n- APK versionCode/versionName now stamped from the release tag in CI'
-              CHANGELOG+=$'\n- Fixed mojibake characters in Wallet (₱ peso sign, · separator)'
-              ;;
-            v0.1.0)
-              CHANGELOG="PeraLog: category-specific Add Expense form"
-              CHANGELOG+=$'\n- Category is now the first field when adding an Expense transaction'
-              CHANGELOG+=$'\n- Description examples adapt to the selected category (Food: Burger, Fried Chicken, Rice, Coffee; Transportation: Jeep, Tricycle, Bus, Taxi, UV Express, Motorcycle; plus examples for every other expense category)'
-              CHANGELOG+=$'\n- Amount label is now category-specific: Price Food, Price Transportation, Price School, and so on'
-              CHANGELOG+=$'\n- Cash Given, Date, Time, Note, balance calculations, history, and the Income form are unchanged'
-              CHANGELOG+=$'\n- First stable, official release of Cova Vault'
-              ;;
-            v0.1.1)
-              CHANGELOG="Account/Profile: explicit Save Changes flow (no more auto-save while editing)"
-              CHANGELOG+=$'\n- Name, Display Name, Email, and Profile Picture now edit a temporary draft instead of updating the saved account on every keystroke'
-              CHANGELOG+=$'\n- Added a Save Changes button; the saved account only updates after the user clicks it'
-              CHANGELOG+=$'\n- The button is disabled and shows "No Changes" when there are no unsaved edits'
-              CHANGELOG+=$'\n- Avatar selection now stages into the draft and commits together with the other fields on save'
-              CHANGELOG+=$'\n- Master-password change flow is unchanged and stays separate'
-              ;;
-            *)
-              CHANGELOG="Bug fixes and improvements"
-              ;;
-          esac
-          printf 'changelog<<EOF\n%s\nEOF\n' "$CHANGELOG" >> "$GITHUB_OUTPUT"
-        shell: bash
-
       - name: Set up GitHub CLI
         if: always()
         shell: bash
@@ -173,7 +109,34 @@ jobs:
           TAG="${{ github.ref_name || inputs.tag }}"
           BUILD_EXIT="${{ steps.build_apk.outputs.build_exit_code }}"
           APK_PATH="${{ steps.find_apk.outputs.apk_path }}"
-          CHANGELOG="${{ steps.changelog.outputs.changelog }}"
+
+          case "$TAG" in
+            v0.1.1-beta)
+              CHANGELOG=$'Fixed mobile storage initialization to prevent crashes\nImproved configuration file formatting\nUpdated APK naming to include the version tag'
+              ;;
+            v0.1.2-beta)
+              CHANGELOG=$'Fixed fire-and-forget writes in native storage adapter (Preferences.set was not awaited)\nAdded fallback read from Capacitor Preferences if cache miss\nFixed async getItem in authStorage and vaultStorage'
+              ;;
+            v0.1.3-beta)
+              CHANGELOG=$'Fixed critical persistence bugs causing data loss on app restart:\n- Fire-and-forget writes in native storage (Preferences.set/remove now awaited)\n- Missing await in vaultStorage.setItem, getOrCreateVaultSalt, setVaultSalt, reencryptVault\n- Added comprehensive debug logging across storage, vaultStorage, encryptedPersist, and Lock rehydration\n- Manual rehydrateStores() after vault unlock with detailed per-store logging\n- Fixed store initialization timing: initStorage() now runs before any store imports via dynamic import'
+              ;;
+            v0.1.4-beta)
+              CHANGELOG=$'Fixed critical data persistence bug causing all user data (Credentials, Wallet, Savings, Notes, Tasks) to disappear after app restart:\n- Root cause: Zustand persist middleware calls storage.setItem() synchronously, but native Capacitor Preferences writes were async and fire-and-forget\n- Fix: Native storage adapter now synchronous with background write queue - caches immediately, queues Preferences.set() for async completion\n- All 5 data stores (Credentials, Notes, Tasks, Wallet, Savings) now persist correctly across full app termination/restart\n- Added comprehensive debug logging to trace: store name, key, save started/completed, item count, native write success/failure, encryption/decryption, rehydration'
+              ;;
+            v0.1.8-beta)
+              CHANGELOG=$'Persistence diagnostics: verify the save → logout → restart → unlock lifecycle on-device\n- New Settings → Diagnostics section and standalone /diagnostics page reachable from the Lock screen\n- 3-phase probe: Phase 1 writes sample data + logs out, Phase 2 verifies native storage after force-close (before unlock), Phase 3 verifies rehydration after unlock\n- Stage-by-stage pass/fail for: native write, Preferences.read, decrypt, store rehydrate, UI display — with no secrets logged\n- Raw Capacitor Preferences inspection table with presence/size/hash per storage key\n- Build identity stamping: every APK/footer now shows version, build number, commit SHA, and build time\n- APK versionCode/versionName now stamped from the release tag in CI\n- Fixed mojibake characters in Wallet (₱ peso sign, · separator)'
+              ;;
+            v0.1.0)
+              CHANGELOG=$'PeraLog: category-specific Add Expense form\n- Category is now the first field when adding an Expense transaction\n- Description examples adapt to the selected category (Food: Burger, Fried Chicken, Rice, Coffee; Transportation: Jeep, Tricycle, Bus, Taxi, UV Express, Motorcycle; plus examples for every other expense category)\n- Amount label is now category-specific: Price Food, Price Transportation, Price School, and so on\n- Cash Given, Date, Time, Note, balance calculations, history, and the Income form are unchanged\n- First stable, official release of Cova Vault'
+              ;;
+            v0.1.1)
+              CHANGELOG=$'Account/Profile: explicit Save Changes flow (no more auto-save while editing)\n- Name, Display Name, Email, and Profile Picture now edit a temporary draft instead of updating the saved account on every keystroke\n- Added a Save Changes button; the saved account only updates after the user clicks it\n- The button is disabled and shows "No Changes" when there are no unsaved edits\n- Avatar selection now stages into the draft and commits together with the other fields on save\n- Master-password change flow is unchanged and stays separate'
+              ;;
+            *)
+              CHANGELOG=$'Bug fixes and improvements'
+              ;;
+          esac
+
           echo "=== Releasing tag: $TAG ==="
           echo "BUILD_EXIT_CODE: $BUILD_EXIT"
           echo "APK_PATH: '$APK_PATH'"
@@ -184,71 +147,70 @@ jobs:
           gh release delete "$TAG" --yes 2>&1 || echo "No existing release to delete (expected)"
 
           echo "2. Creating new release..."
-          # NOTE: heredoc delimiter must be UNQUOTED so ${CHANGELOG} expands
-          # into the real release notes (quoted 'EOF' writes the placeholder literally).
           if [[ "$TAG" == *-beta* ]]; then
-          cat > release-notes.md << EOF
-          🚀 Welcome to Cova Vault ${{ env.TAG }}
-          This is a beta testing release of Cova Vault — a secure, all-in-one personal vault app where you can keep your passwords, notes, tasks, finances, savings goals, and more in one organized place.
+            cat > release-notes.md <<EOF
+🚀 Welcome to Cova Vault $TAG
+This is a beta testing release of Cova Vault — a secure, all-in-one personal vault app where you can keep your passwords, notes, tasks, finances, savings goals, and more in one organized place.
 
-          This beta build is being shared to test the app's features, check that everything is working smoothly, and discover any issues that still need to be fixed. Some features may still change or have bugs, and your feedback is very welcome!
+This beta build is being shared to test the app's features, check that everything is working smoothly, and discover any issues that still need to be fixed. Some features may still change or have bugs, and your feedback is very welcome!
 
-          📌 What is Cova Vault?
-          Cova Vault is a privacy-focused personal vault application designed to help you organize your daily life securely. It runs locally on your device with no cloud sync required, keeping your data in your own hands.
+📌 What is Cova Vault?
+Cova Vault is a privacy-focused personal vault application designed to help you organize your daily life securely. It runs locally on your device with no cloud sync required, keeping your data in your own hands.
 
-          ✨ Main Features
-          🔐 Credentials — Store and manage your passwords securely
-          📝 Notes — Keep quick notes, ideas, and references
-          ✅ Tasks — Track your to-dos and schedules
-          💰 PeraLog (Finance) — Track income, expenses, budgets, and balance
-          🎯 Savings — Set savings goals and monitor your progress
-          📁 Folders — Organize everything with easy navigation
-          ⭐ Favorites — Quick access to your most-used items
-          📅 Calendar & Schedule — Keep track of dates and deadlines
-          🔑 Password Generator — Create strong, secure passwords
-          📊 Activity Log — See everything happening in your vault
-          📱 Mobile-Ready — Works great on phones and tablets
+✨ Main Features
+🔐 Credentials — Store and manage your passwords securely
+📝 Notes — Keep quick notes, ideas, and references
+✅ Tasks — Track your to-dos and schedules
+💰 PeraLog (Finance) — Track income, expenses, budgets, and balance
+🎯 Savings — Set savings goals and monitor your progress
+📁 Folders — Organize everything with easy navigation
+⭐ Favorites — Quick access to your most-used items
+📅 Calendar & Schedule — Keep track of dates and deadlines
+🔑 Password Generator — Create strong, secure passwords
+📊 Activity Log — See everything happening in your vault
+📱 Mobile-Ready — Works great on phones and tablets
 
-          🔧 What's New in ${{ env.TAG }}
-          ${CHANGELOG}
-          ⚠️ Persistence verification
-          The five-store regression passes with real stores and encryption across separate Node processes using mock Capacitor Preferences. Hydration preserves the saved blobs. Android native storage and the installed APK force-close test have NOT yet been verified on a real device. Back up important data before testing; previously overwritten records may not be recoverable.
+🔧 What's New in $TAG
+$CHANGELOG
+⚠️ Persistence verification
+The five-store regression passes with real stores and encryption across separate Node processes using mock Capacitor Preferences. Hydration preserves the saved blobs. Android native storage and the installed APK force-close test have NOT yet been verified on a real device. Back up important data before testing; previously overwritten records may not be recoverable.
 
-          ⚠️ Beta Notice
-          This is a beta release, so some features may not be fully finished yet. You may experience bugs, missing features, or changes in future updates. Please report any issues you find so we can make Cova Vault better!
-          EOF
+⚠️ Beta Notice
+This is a beta release, so some features may not be fully finished yet. You may experience bugs, missing features, or changes in future updates. Please report any issues you find so we can make Cova Vault better!
+EOF
           else
-          cat > release-notes.md << EOF
-          🎉 Cova Vault ${{ env.TAG }} — Official Release
-          The first stable, official release of Cova Vault — a secure, all-in-one personal vault app where you can keep your passwords, notes, tasks, finances, savings goals, and more in one organized place.
+            cat > release-notes.md <<EOF
+🎉 Cova Vault $TAG — Official Release
+The first stable, official release of Cova Vault — a secure, all-in-one personal vault app where you can keep your passwords, notes, tasks, finances, savings goals, and more in one organized place.
 
-          After several beta iterations, Cova Vault is now ready for everyday use. Thank you to everyone who tested the beta builds and shared feedback!
+After several beta iterations, Cova Vault is now ready for everyday use. Thank you to everyone who tested the beta builds and shared feedback!
 
-          📌 What is Cova Vault?
-          Cova Vault is a privacy-focused personal vault application designed to help you organize your daily life securely. It runs locally on your device with no cloud sync required, keeping your data in your own hands.
+📌 What is Cova Vault?
+Cova Vault is a privacy-focused personal vault application designed to help you organize your daily life securely. It runs locally on your device with no cloud sync required, keeping your data in your own hands.
 
-          ✨ Main Features
-          🔐 Credentials — Store and manage your passwords securely
-          📝 Notes — Keep quick notes, ideas, and references
-          ✅ Tasks — Track your to-dos and schedules
-          💰 PeraLog (Finance) — Track income, expenses, budgets, and balance
-          🎯 Savings — Set savings goals and monitor your progress
-          📁 Folders — Organize everything with easy navigation
-          ⭐ Favorites — Quick access to your most-used items
-          📅 Calendar & Schedule — Keep track of dates and deadlines
-          🔑 Password Generator — Create strong, secure passwords
-          📊 Activity Log — See everything happening in your vault
-          📱 Mobile-Ready — Works great on phones and tablets
+✨ Main Features
+🔐 Credentials — Store and manage your passwords securely
+📝 Notes — Keep quick notes, ideas, and references
+✅ Tasks — Track your to-dos and schedules
+💰 PeraLog (Finance) — Track income, expenses, budgets, and balance
+🎯 Savings — Set savings goals and monitor your progress
+📁 Folders — Organize everything with easy navigation
+⭐ Favorites — Quick access to your most-used items
+📅 Calendar & Schedule — Keep track of dates and deadlines
+🔑 Password Generator — Create strong, secure passwords
+📊 Activity Log — See everything happening in your vault
+📱 Mobile-Ready — Works great on phones and tablets
 
-          🔧 What's New in ${{ env.TAG }}
-          ${CHANGELOG}
-          📥 Downloads
-          cova-vault.zip — Web build (host it on any static server)
-          app-CovaVault-${{ env.TAG }}.apk — Android app
+🔧 What's New in $TAG
+$CHANGELOG
+📥 Downloads
+cova-vault.zip — Web build (host it on any static server)
+app-CovaVault-$TAG.apk — Android app
 
-          🙏 Thank you for using Cova Vault! Please report any issues you find so we can keep improving the app.
-          EOF
+🙏 Thank you for using Cova Vault! Please report any issues you find so we can keep improving the app.
+EOF
           fi
+
           RELEASE_FLAGS=()
           if [[ "$TAG" == *-beta* ]]; then RELEASE_FLAGS+=(--prerelease); fi
           gh release create "$TAG" --title "Cova $TAG" -F release-notes.md "${RELEASE_FLAGS[@]}" 2>&1
