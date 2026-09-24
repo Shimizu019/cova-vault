@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+﻿import { useState } from 'react';
 import { User, Camera } from 'lucide-react';
 import { Input, Label } from '@components/ui/Input';
 import { useSettingsStore, useUIStore } from '@store';
@@ -12,11 +12,6 @@ export function AccountSection() {
   const { addToast } = useUIStore();
   const navigate = useNavigate();
 
-  // Local state for the inputs — auto-save to the store on every keystroke
-  const nameRef = useRef(user.name);
-  const displayNameRef = useRef(user.displayName);
-  const emailRef = useRef(user.email);
-
   // Master-password change form (separate from the auto-save above because
   // it has validation, confirmation, and a click-to-save action).
   const [newPassword, setNewPassword] = useState('');
@@ -24,21 +19,45 @@ export function AccountSection() {
   const [passwordErr, setPasswordErr] = useState<string | null>(null);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
-  // Sync to store on input change (with a short debounce)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const queueSave = (patch: Partial<typeof user>) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      updateUser(patch);
-      addToast('Profile updated', 'success', 1500);
-    }, 600);
-  };
+  // Unsaved changes draft - initialized lazily from the current user state
+  const [draft, setDraft] = useState(() => ({
+    name: user.name,
+    displayName: user.displayName,
+    email: user.email,
+    avatarUrl: user.avatarUrl,
+  }));
 
-  useEffect(() => {
-    nameRef.current = user.name;
-    displayNameRef.current = user.displayName;
-    emailRef.current = user.email;
-  }, [user.name, user.displayName, user.email]);
+  // Check if there are unsaved changes
+  const hasUnsavedChanges =
+    draft.name !== user.name ||
+    draft.displayName !== user.displayName ||
+    draft.email !== user.email ||
+    draft.avatarUrl !== user.avatarUrl;
+
+    // Update draft when inputs change
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => setDraft(prev => ({ ...prev, name: e.target.value }));
+  const handleDisplayNameChange = (e: React.ChangeEvent<HTMLInputElement>) => setDraft(prev => ({ ...prev, displayName: e.target.value }));
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => setDraft(prev => ({ ...prev, email: e.target.value }));
+
+    // Save changes to store
+  const handleSaveChanges = async () => {
+    try {
+      const updates: Partial<typeof user> = {};
+      if (draft.name !== user.name) updates.name = draft.name;
+      if (draft.displayName !== user.displayName) updates.displayName = draft.displayName;
+      if (draft.email !== user.email) updates.email = draft.email;
+      if (draft.avatarUrl !== user.avatarUrl) updates.avatarUrl = draft.avatarUrl;
+
+      if (Object.keys(updates).length > 0) {
+        updateUser(updates);
+        addToast('Profile updated', 'success', 1500);
+      } else {
+        addToast('No changes to save', 'info', 1500);
+      }
+    } catch {
+      addToast('Failed to save changes', 'error', 1500);
+    }
+  };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,7 +135,7 @@ export function AccountSection() {
                 const reader = new FileReader();
                 reader.onload = (ev) => {
                   const url = ev.target?.result as string;
-                  updateUser({ avatarUrl: url });
+                  setDraft(prev => ({ ...prev, avatarUrl: url }));
                   addToast('Avatar updated', 'success');
                 };
                 reader.readAsDataURL(file);
@@ -130,16 +149,26 @@ export function AccountSection() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <Label htmlFor="profile-name">Name</Label>
-            <Input id="profile-name" defaultValue={user.name} onChange={(e) => { nameRef.current = e.target.value; queueSave({ name: e.target.value }); }} placeholder="Your name" />
+            <Input id="profile-name" defaultValue={draft.name} onChange={handleNameChange} placeholder="Your name" />
           </div>
           <div>
             <Label htmlFor="profile-display">Display Name</Label>
-            <Input id="profile-display" defaultValue={user.displayName} onChange={(e) => { displayNameRef.current = e.target.value; queueSave({ displayName: e.target.value }); }} placeholder="Display name" />
+            <Input id="profile-display" defaultValue={draft.displayName} onChange={handleDisplayNameChange} placeholder="Display name" />
           </div>
           <div>
             <Label htmlFor="profile-email">Email</Label>
-            <Input id="profile-email" type="email" defaultValue={user.email} onChange={(e) => { emailRef.current = e.target.value; queueSave({ email: e.target.value }); }} placeholder="email@example.com" />
+            <Input id="profile-email" type="email" defaultValue={draft.email} onChange={handleEmailChange} placeholder="email@example.com" />
           </div>
+        </div>
+        <div className="flex justify-end mt-4">
+          <button
+            type="button"
+            onClick={handleSaveChanges}
+            disabled={!hasUnsavedChanges}
+            className={`btn btn-primary text-sm ${hasUnsavedChanges ? '' : 'opacity-50 cursor-not-allowed'}`}
+          >
+            {hasUnsavedChanges ? 'Save Changes' : 'No Changes'}
+          </button>
         </div>
         <form onSubmit={handleChangePassword} noValidate className="space-y-3" aria-label="Change master password">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
