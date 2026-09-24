@@ -160,6 +160,11 @@ jobs:
           printf 'changelog<<EOF\n%s\nEOF\n' "$CHANGELOG" >> "$GITHUB_OUTPUT"
         shell: bash
 
+      - name: Set up GitHub CLI
+        uses: cli/gh-action@v2
+        with:
+          version: stable
+
       - name: Create GitHub Release
         if: always()
         run: |
@@ -170,6 +175,8 @@ jobs:
           echo "=== Releasing tag: $TAG ==="
           echo "BUILD_EXIT_CODE: $BUILD_EXIT"
           echo "APK_PATH: '$APK_PATH'"
+          echo "GH CLI: $(command -v gh || echo MISSING)"
+          gh --version
 
           echo "1. Deleting existing release if it exists..."
           gh release delete "$TAG" --yes 2>&1 || echo "No existing release to delete (expected)"
