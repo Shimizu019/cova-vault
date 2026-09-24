@@ -161,9 +161,11 @@ jobs:
         shell: bash
 
       - name: Set up GitHub CLI
-        uses: cli/gh-action@v2
-        with:
-          version: stable
+        if: always()
+        shell: bash
+        run: |
+          echo "GH CLI: $(command -v gh || echo MISSING)"
+          if command -v gh >/dev/null 2>&1; then gh --version; fi
 
       - name: Create GitHub Release
         if: always()
