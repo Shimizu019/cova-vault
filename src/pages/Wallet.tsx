@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Wallet as WalletIcon, TrendingUp, TrendingDown, Search } from 'lucide-react';
+import { Plus, Wallet as WalletIcon, TrendingUp, TrendingDown, Search, ArrowLeftRight, Landmark, Smartphone, Trash2 } from 'lucide-react';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
 import { Modal } from '@components/ui/Modal';
@@ -24,18 +24,21 @@ const CAT_DESCRIPTION_EXAMPLES: Record<string, string> = {
 
 export function Wallet() {
   const {
-    records, startingBalance, budgets,
+    wallets, records, budgets,
     setStartingBalance, addRecord, updateRecord, deleteRecord,
-    getBalance, getMonthlyIncome, getMonthlyExpense, getTodaysExpense,
-    getWeeklyExpense, getSpendingByCategory, setBudget, updateBudget,
+    getWalletBalance, getTotalBalance, addWallet, deleteWallet,
+    transferMoney, setBudget, updateBudget,
   } = useWalletStore();
   const { addToast } = useUIStore();
 
-  const [showSetup, setShowSetup] = useState(startingBalance === 0 && records.length === 0);
+  const [selectedWalletId, setSelectedWalletId] = useState(wallets[0]?.id ?? '');
+  const [showSetup, setShowSetup] = useState(wallets.length === 0);
   const [setupAmt, setSetupAmt] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isBudgetOpen, setIsBudgetOpen] = useState(false);
+  const [isWalletOpen, setIsWalletOpen] = useState(false);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [selRecord, setSelRecord] = useState<WalletRecord | null>(null);
   const [editMode, setEditMode] = useState(false);
 
@@ -48,39 +51,73 @@ export function Wallet() {
   const [dTime, setDTime] = useState(new Date().toTimeString().slice(0, 5));
   const [dNote, setDNote] = useState('');
 
+  const [walletName, setWalletName] = useState('');
+  const [walletType, setWalletType] = useState<'cash' | 'digital' | 'bank' | 'other'>('cash');
+  const [walletAmount, setWalletAmount] = useState('');
+  const [transferTo, setTransferTo] = useState('');
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferNote, setTransferNote] = useState('');
+
   const [bCat, setBCat] = useState('Food');
   const [bLimit, setBLimit] = useState('');
 
   const [srch, setSrch] = useState('');
-  const [fType, setFType] = useState<'all' | 'income' | 'expense'>('all');
+  const [fType, setFType] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
   const [fCat, setFCat] = useState('all');
   const [sBy, setSBy] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
 
-  const balance = getBalance();
-  const moIncome = getMonthlyIncome();
-  const moExpense = getMonthlyExpense();
-  const todayExp = getTodaysExpense();
-  const wkExp = getWeeklyExpense();
-  const byCat = getSpendingByCategory();
+  const selectedWallet = wallets.find((wallet) => wallet.id === selectedWalletId) ?? wallets[0];
+  const activeWalletId = selectedWallet?.id ?? '';
+  const walletRecords = useMemo(() => records.filter((record) =>
+    record.walletId === activeWalletId ||
+    (record.type === 'transfer' && record.destinationWalletId === activeWalletId)
+  ), [records, activeWalletId]);
+  const balance = activeWalletId ? getWalletBalance(activeWalletId) : 0;
+  const totalBalance = getTotalBalance();
+  const walletStartingBalance = walletRecords.find((record) => record.id === `starting-balance:${activeWalletId}`)?.amount ?? 0;
+  const month = new Date().toISOString().slice(0, 7);
+  const today = new Date().toISOString().slice(0, 10);
+  const weekAgo = new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const isStartingBalance = (record: WalletRecord) => record.id === 'starting-balance' || record.id.startsWith('starting-balance:');
+  const moIncome = walletRecords
+    .filter((record) => record.type === 'income' && record.date.startsWith(month) && !isStartingBalance(record))
+    .reduce((sum, record) => sum + record.amount, 0);
+  const moExpense = walletRecords
+    .filter((record) => record.type === 'expense' && record.date.startsWith(month))
+    .reduce((sum, record) => sum + record.amount, 0);
+  const todayExp = walletRecords
+    .filter((record) => record.type === 'expense' && record.date === today)
+    .reduce((sum, record) => sum + record.amount, 0);
+  const wkExp = walletRecords
+    .filter((record) => record.type === 'expense' && record.date >= weekAgo)
+    .reduce((sum, record) => sum + record.amount, 0);
+  const byCat = Array.from(walletRecords
+    .filter((record) => record.type === 'expense' && record.date.startsWith(month))
+    .reduce((totals, record) => totals.set(record.category, (totals.get(record.category) ?? 0) + record.amount), new Map<string, number>()))
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((a, b) => b.amount - a.amount);
   const net = moIncome - moExpense;
   const change = formType === 'expense' && dCash ? Math.max(0, parseFloat(dCash || '0') - parseFloat(dAmt || '0')) : 0;
 
   const fRecords = useMemo(() => {
-    let r = [...records];
-    if (fType !== 'all') r = r.filter((x) => x.type === fType);
-    if (fCat !== 'all') r = r.filter((x) => x.category === fCat);
+    let result = walletRecords.filter((record) => !isStartingBalance(record));
+    if (fType !== 'all') result = result.filter((record) => record.type === fType);
+    if (fCat !== 'all') result = result.filter((record) => record.category === fCat);
     if (srch) {
-      const q = srch.toLowerCase();
-      r = r.filter((x) => x.description.toLowerCase().includes(q) || x.category.toLowerCase().includes(q) || (x.note && x.note.toLowerCase().includes(q)));
+      const query = srch.toLowerCase();
+      result = result.filter((record) =>
+        record.description.toLowerCase().includes(query) ||
+        record.category.toLowerCase().includes(query) ||
+        record.note?.toLowerCase().includes(query)
+      );
     }
-    r.sort((a, b) => {
+    return result.sort((a, b) => {
       if (sBy === 'newest') return new Date(b.date + 'T' + b.time).getTime() - new Date(a.date + 'T' + a.time).getTime();
       if (sBy === 'oldest') return new Date(a.date + 'T' + a.time).getTime() - new Date(b.date + 'T' + b.time).getTime();
       if (sBy === 'highest') return b.amount - a.amount;
       return a.amount - b.amount;
     });
-    return r.filter((x) => x.id !== 'starting-balance');
-  }, [records, fType, fCat, srch, sBy]);
+  }, [walletRecords, fType, fCat, srch, sBy]);
 
   const doSetup = () => {
     const a = parseFloat(setupAmt);
@@ -95,12 +132,23 @@ export function Wallet() {
   const openNew = (t: 'income' | 'expense') => { setFormType(t); setDCat(t === 'income' ? 'Allowance' : 'Food'); setIsModalOpen(true); };
 
   const openEdit = (r: WalletRecord) => {
-    setSelRecord(r); setFormType(r.type); setDDesc(r.description); setDAmt(r.amount.toString());
-    setDCash(r.cashGiven?.toString() || ''); setDCat(r.category); setDDate(r.date); setDTime(r.time);
-    setDNote(r.note || ''); setEditMode(true); setIsModalOpen(true);
+    if (r.type !== 'transfer') {
+      setSelRecord(r); setFormType(r.type); setDDesc(r.description); setDAmt(r.amount.toString());
+      setDCash(r.cashGiven?.toString() || ''); setDCat(r.category); setDDate(r.date); setDTime(r.time);
+      setDNote(r.note || ''); setEditMode(true); setIsModalOpen(true);
+    }
   };
 
   const openDetail = (r: WalletRecord) => { setSelRecord(r); setIsDetailOpen(true); };
+
+  /** Direction label for transfers: always "Source → Destination". */
+  const transferRoute = (r: WalletRecord) => {
+    const from = wallets.find((wallet) => wallet.id === r.walletId)?.name ?? 'Unknown';
+    const to = r.destinationWalletId
+      ? (wallets.find((wallet) => wallet.id === r.destinationWalletId)?.name ?? 'Deleted wallet')
+      : 'Unknown';
+    return `${from} → ${to}`;
+  };
 
   const doSave = () => {
     const a = parseFloat(dAmt);
@@ -113,7 +161,7 @@ export function Wallet() {
       updateRecord(selRecord.id, { description: dDesc.trim(), amount: a, category: dCat, date: dDate, time: dTime, note: dNote || undefined, cashGiven: cg, change: ch });
       addToast('Updated', 'success');
     } else {
-      addRecord({ type: formType, description: dDesc.trim(), amount: a, category: dCat, date: dDate, time: dTime, note: dNote || undefined, cashGiven: cg, change: ch });
+      addRecord({ walletId: activeWalletId, type: formType, description: dDesc.trim(), amount: a, category: dCat, date: dDate, time: dTime, note: dNote || undefined, cashGiven: cg, change: ch });
       addToast(formType === 'income' ? 'Income recorded' : 'Expense recorded', 'success');
     }
     setIsModalOpen(false); resetF();
@@ -128,6 +176,54 @@ export function Wallet() {
     if (ex) { updateBudget(ex.id, l); addToast('Budget updated', 'success'); }
     else { setBudget({ id: generateId(), category: bCat, limit: l, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }); addToast('Budget set', 'success'); }
     setIsBudgetOpen(false); setBLimit('');
+  };
+
+  const openWalletModal = () => {
+    setWalletName('');
+    setWalletType('cash');
+    setWalletAmount('');
+    setIsWalletOpen(true);
+  };
+
+  const doWallet = () => {
+    const name = walletName.trim();
+    if (!name) { addToast('Enter wallet name', 'error'); return; }
+    const amount = walletAmount ? parseFloat(walletAmount) : 0;
+    if (isNaN(amount) || amount < 0) { addToast('Enter valid starting amount', 'error'); return; }
+    const wallet = addWallet(name, walletType, amount);
+    setSelectedWalletId(wallet.id);
+    setIsWalletOpen(false);
+    addToast('Wallet added', 'success');
+  };
+
+  const openTransferModal = () => {
+    if (wallets.length < 2) { addToast('Add another wallet first', 'error'); return; }
+    setTransferTo(wallets.find((wallet) => wallet.id !== activeWalletId)?.id ?? '');
+    setTransferAmount('');
+    setTransferNote('');
+    setIsTransferOpen(true);
+  };
+
+  const doTransfer = () => {
+    const amount = parseFloat(transferAmount);
+    if (!transferTo) { addToast('Choose destination wallet', 'error'); return; }
+    if (isNaN(amount) || amount <= 0) { addToast('Enter valid amount', 'error'); return; }
+    try {
+      transferMoney(activeWalletId, transferTo, amount, transferNote.trim() || undefined);
+      setIsTransferOpen(false);
+      addToast('Transfer complete', 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Transfer failed', 'error');
+    }
+  };
+
+  const doDeleteWallet = () => {
+    if (!selectedWallet || wallets.length <= 1) { addToast('Keep at least one wallet', 'error'); return; }
+    if (!confirm('Delete "' + selectedWallet.name + '" and its transactions?')) return;
+    const remaining = wallets.filter((wallet) => wallet.id !== selectedWallet.id);
+    deleteWallet(selectedWallet.id);
+    setSelectedWalletId(remaining[0]?.id ?? '');
+    addToast('Wallet deleted', 'info');
   };
 
   if (showSetup) return (
@@ -149,17 +245,66 @@ export function Wallet() {
           <h1 className="text-2xl font-bold text-cova-text"><span className="text-gradient">PeraLog</span></h1>
           <p className="text-sm text-cova-textMuted mt-1">Track your money, expenses, and income.</p>
         </div>
-        <Button variant="primary" onClick={() => openNew('expense')}><Plus className="w-4 h-4" /> Add Transaction</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" onClick={openWalletModal}><Plus className="w-4 h-4" /> Add Wallet</Button>
+          <Button variant="secondary" onClick={openTransferModal}><ArrowLeftRight className="w-4 h-4" /> Transfer</Button>
+          <Button variant="primary" onClick={() => openNew('expense')}><Plus className="w-4 h-4" /> Add Transaction</Button>
+        </div>
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {wallets.map((wallet) => {
+          const walletBalance = getWalletBalance(wallet.id);
+          const WalletTypeIcon = wallet.type === 'bank' ? Landmark : wallet.type === 'digital' ? Smartphone : WalletIcon;
+          return (
+            <button
+              key={wallet.id}
+              type="button"
+              onClick={() => setSelectedWalletId(wallet.id)}
+              className={
+                'min-w-36 flex-1 flex items-center gap-3 p-3 rounded-xl border text-left transition-colors ' +
+                (wallet.id === activeWalletId
+                  ? 'border-cova-primary bg-cova-primary/10'
+                  : 'border-cova-border bg-cova-surface hover:bg-cova-surfaceHover')
+              }
+            >
+              <div className={'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ' + (wallet.id === activeWalletId ? 'bg-cova-primary/20' : 'bg-cova-bg')}>
+                <WalletTypeIcon className={'w-4 h-4 ' + (wallet.id === activeWalletId ? 'text-cova-primary' : 'text-cova-textMuted')} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-cova-text truncate">{wallet.name}</p>
+                <p className={'text-xs font-semibold ' + (walletBalance >= 0 ? 'text-cova-textSecondary' : 'text-cova-danger')}>{formatPHP(walletBalance)}</p>
+              </div>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={openWalletModal}
+          className="min-w-28 flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-cova-border text-cova-textMuted hover:text-cova-text hover:border-cova-primary transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          <span className="text-sm font-medium">New Wallet</span>
+        </button>
       </div>
 
       <div className="card p-6 bg-gradient-to-br from-cova-surface to-cova-bg border border-cova-border">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="flex-1">
-            <p className="text-xs text-cova-textMuted uppercase tracking-wider font-semibold mb-1">Available Balance</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-xs text-cova-textMuted uppercase tracking-wider font-semibold">Available Balance</p>
+              <span className="text-xs font-medium text-cova-textSecondary">· {selectedWallet?.name ?? 'No wallet'}</span>
+              {wallets.length > 1 && (
+                <button type="button" onClick={doDeleteWallet} aria-label="Delete selected wallet" className="p-1 rounded text-cova-textMuted hover:text-cova-danger hover:bg-cova-danger/10 transition-colors">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
             <p className={'text-4xl font-bold ' + (balance >= 0 ? 'text-cova-success' : 'text-cova-danger')}>{formatPHP(balance)}</p>
+            <p className="text-xs text-cova-textMuted mt-1">All wallets: <span className="font-semibold text-cova-textSecondary">{formatPHP(totalBalance)}</span></p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 lg:gap-8">
-            <div><p className="text-xs text-cova-textMuted uppercase tracking-wider font-semibold">Starting</p><p className="text-lg font-bold text-cova-text mt-1">{formatPHP(startingBalance)}</p></div>
+            <div><p className="text-xs text-cova-textMuted uppercase tracking-wider font-semibold">Starting</p><p className="text-lg font-bold text-cova-text mt-1">{formatPHP(walletStartingBalance)}</p></div>
             <div><p className="text-xs text-cova-textMuted uppercase tracking-wider font-semibold flex items-center gap-1"><TrendingUp className="w-3 h-3 text-cova-success" /> Income</p><p className="text-lg font-bold text-cova-success mt-1">{formatPHP(moIncome)}</p></div>
             <div><p className="text-xs text-cova-textMuted uppercase tracking-wider font-semibold flex items-center gap-1"><TrendingDown className="w-3 h-3 text-cova-danger" /> Expenses</p><p className="text-lg font-bold text-cova-danger mt-1">{formatPHP(moExpense)}</p></div>
             <div><p className="text-xs text-cova-textMuted uppercase tracking-wider font-semibold">Today</p><p className="text-lg font-bold text-cova-text mt-1">{formatPHP(todayExp)}</p></div>
@@ -205,21 +350,27 @@ export function Wallet() {
             <h3 className="text-sm font-semibold text-cova-text">Recent Transactions</h3>
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cova-textMuted" /><input type="text" placeholder="Search..." value={srch} onChange={(e) => setSrch(e.target.value)} className="input pl-9 pr-3 py-1.5 text-sm w-40" /></div>
-              <select value={fType} onChange={(e) => setFType(e.target.value as 'all' | 'income' | 'expense')} className="input py-1.5 text-sm"><option value="all">All</option><option value="income">Income</option><option value="expense">Expense</option></select>
-              <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="input py-1.5 text-sm"><option value="all">All Categories</option>{[...EXPENSE_CATS, ...INCOME_CATS].map((c) => <option key={c} value={c}>{c}</option>)}</select>
+              <select value={fType} onChange={(e) => setFType(e.target.value as 'all' | 'income' | 'expense' | 'transfer')} className="input py-1.5 text-sm"><option value="all">All</option><option value="income">Income</option><option value="expense">Expense</option><option value="transfer">Transfer</option></select>
+              <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="input py-1.5 text-sm"><option value="all">All Categories</option>{[...EXPENSE_CATS, ...INCOME_CATS, 'Transfer'].map((c) => <option key={c} value={c}>{c}</option>)}</select>
               <select value={sBy} onChange={(e) => setSBy(e.target.value as 'newest' | 'oldest' | 'highest' | 'lowest')} className="input py-1.5 text-sm"><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="highest">Highest</option><option value="lowest">Lowest</option></select>
             </div>
           </div>
         </div>
         {fRecords.length === 0 ? <EmptyState icon={<WalletIcon className="w-10 h-10" />} title="No transactions yet" description="Add your first income or expense to begin tracking your money." action={<Button variant="primary" onClick={() => openNew('expense')}><Plus className="w-4 h-4" /> Add Transaction</Button>} /> : (
           <div className="divide-y divide-cova-border">
-            {fRecords.map((r) => (
-              <div key={r.id} className="px-5 py-4 flex items-center gap-3 hover:bg-cova-surfaceHover transition-colors cursor-pointer" onClick={() => openDetail(r)}>
-                <div className={'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ' + (r.type === 'income' ? 'bg-cova-success/15' : 'bg-cova-danger/15')}>{r.type === 'income' ? <TrendingUp className="w-5 h-5 text-cova-success" /> : <TrendingDown className="w-5 h-5 text-cova-danger" />}</div>
-                <div className="flex-1 min-w-0"><p className="text-sm font-medium text-cova-text truncate">{r.description}</p><p className="text-xs text-cova-textMuted">{r.category} · {formatDate(r.date)}</p></div>
-                <span className={'font-bold text-sm ' + (r.type === 'income' ? 'text-cova-success' : 'text-cova-danger')}>{r.type === 'income' ? '+' : '-'}{formatPHP(r.amount)}</span>
-              </div>
-            ))}
+            {fRecords.map((r) => {
+              const isOutgoingTransfer = r.type === 'transfer' && r.walletId === activeWalletId;
+              const isIncomeAmount = r.type === 'income' || (r.type === 'transfer' && !isOutgoingTransfer);
+              return (
+                <div key={r.id} className="px-5 py-4 flex items-center gap-3 hover:bg-cova-surfaceHover transition-colors cursor-pointer" onClick={() => openDetail(r)}>
+                  <div className={'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ' + (isIncomeAmount ? 'bg-cova-success/15' : 'bg-cova-danger/15')}>
+                    {r.type === 'transfer' ? <ArrowLeftRight className={'w-5 h-5 ' + (isIncomeAmount ? 'text-cova-success' : 'text-cova-danger')} /> : r.type === 'income' ? <TrendingUp className="w-5 h-5 text-cova-success" /> : <TrendingDown className="w-5 h-5 text-cova-danger" />}
+                  </div>
+                  <div className="flex-1 min-w-0"><p className="text-sm font-medium text-cova-text truncate">{r.type === 'transfer' ? transferRoute(r) : r.description}</p><p className="text-xs text-cova-textMuted">{r.category} · {formatDate(r.date)}</p></div>
+                  <span className={'font-bold text-sm ' + (isIncomeAmount ? 'text-cova-success' : 'text-cova-danger')}>{isIncomeAmount ? '+' : '-'}{formatPHP(r.amount)}</span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -249,15 +400,23 @@ export function Wallet() {
         </div>
       </Modal>
 
-      <Modal isOpen={isDetailOpen} onClose={() => { setIsDetailOpen(false); setSelRecord(null); }} title={selRecord?.description || ''} size="md" footer={[
+      <Modal isOpen={isDetailOpen} onClose={() => { setIsDetailOpen(false); setSelRecord(null); }} title={selRecord?.description || ''} size="md" footer={selRecord?.type === 'transfer' ? [
+    <Button key="delete" variant="danger" onClick={() => { if (selRecord) doDel(selRecord); }}>Delete</Button>
+  ] : [
     <Button key="delete" variant="danger" onClick={() => { if (selRecord) doDel(selRecord); }}>Delete</Button>,
     <Button key="edit" variant="primary" onClick={() => { setIsDetailOpen(false); if (selRecord) openEdit(selRecord); }}>Edit</Button>
   ]}>
         {selRecord && (
+          (() => {
+            const selOutgoingTransfer = selRecord.type === 'transfer' && selRecord.walletId === activeWalletId;
+            const selIsIncome = selRecord.type === 'income' || (selRecord.type === 'transfer' && !selOutgoingTransfer);
+            return (
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-4 bg-cova-surface rounded-lg">
-              <div className={'w-12 h-12 rounded-lg flex items-center justify-center ' + (selRecord.type === 'income' ? 'bg-cova-success/15' : 'bg-cova-danger/15')}>{selRecord.type === 'income' ? <TrendingUp className="w-6 h-6 text-cova-success" /> : <TrendingDown className="w-6 h-6 text-cova-danger" />}</div>
-              <div><p className={'text-2xl font-bold ' + (selRecord.type === 'income' ? 'text-cova-success' : 'text-cova-danger')}>{selRecord.type === 'income' ? '+' : '-'}{formatPHP(selRecord.amount)}</p><p className="text-sm text-cova-textMuted capitalize">{selRecord.type}</p></div>
+              <div className={'w-12 h-12 rounded-lg flex items-center justify-center ' + (selIsIncome ? 'bg-cova-success/15' : 'bg-cova-danger/15')}>
+                {selRecord.type === 'transfer' ? <ArrowLeftRight className={'w-6 h-6 ' + (selIsIncome ? 'text-cova-success' : 'text-cova-danger')} /> : selRecord.type === 'income' ? <TrendingUp className="w-6 h-6 text-cova-success" /> : <TrendingDown className="w-6 h-6 text-cova-danger" />}
+              </div>
+              <div><p className={'text-2xl font-bold ' + (selIsIncome ? 'text-cova-success' : 'text-cova-danger')}>{selIsIncome ? '+' : '-'}{formatPHP(selRecord.amount)}</p><p className="text-sm text-cova-textMuted capitalize">{selRecord.type === 'transfer' ? transferRoute(selRecord) : selRecord.type}</p></div>
             </div>
             <div className="space-y-3">
               <div className="flex justify-between"><span className="text-sm text-cova-textMuted">Category</span><span className="text-sm font-medium text-cova-text">{selRecord.category}</span></div>
@@ -272,6 +431,8 @@ export function Wallet() {
               {selRecord.note && <div className="pt-2 border-t border-cova-border"><p className="text-sm text-cova-textMuted mb-1">Note</p><p className="text-sm text-cova-text">{selRecord.note}</p></div>}
             </div>
           </div>
+            );
+          })()
         )}
       </Modal>
 
@@ -279,6 +440,58 @@ export function Wallet() {
         <div className="space-y-4">
           <div><label className="label">Category</label><select value={bCat} onChange={(e) => setBCat(e.target.value)} className="input w-full">{EXPENSE_CATS.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
           <div><label className="label">Budget Limit (₱)</label><Input type="number" min="0" step="0.01" value={bLimit} onChange={(e) => setBLimit(e.target.value)} placeholder="0.00" /></div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} title="Add Wallet" size="sm" footer={<><Button variant="secondary" onClick={() => setIsWalletOpen(false)}>Cancel</Button><Button variant="primary" onClick={doWallet}>Add Wallet</Button></>}>
+        <div className="space-y-4">
+          <div>
+            <label className="label">Wallet Name</label>
+            <Input value={walletName} onChange={(e) => setWalletName(e.target.value)} placeholder="e.g. GCash, Maya, Cash" maxLength={40} />
+          </div>
+          <div>
+            <label className="label">Type</label>
+            <select value={walletType} onChange={(e) => setWalletType(e.target.value as typeof walletType)} className="input w-full">
+              <option value="cash">Cash</option>
+              <option value="digital">Digital Wallet</option>
+              <option value="bank">Bank</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Starting Amount (₱, optional)</label>
+            <Input type="number" min="0" step="0.01" value={walletAmount} onChange={(e) => setWalletAmount(e.target.value)} placeholder="0.00" />
+          </div>
+          <p className="text-xs text-cova-textMuted">You can switch between wallets from the wallet bar at the top.</p>
+        </div>
+      </Modal>
+
+      <Modal isOpen={isTransferOpen} onClose={() => setIsTransferOpen(false)} title="Transfer Money" size="sm" footer={<><Button variant="secondary" onClick={() => setIsTransferOpen(false)}>Cancel</Button><Button variant="primary" onClick={doTransfer}>Transfer</Button></>}>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 p-3 bg-cova-surface rounded-lg border border-cova-border">
+            <div className="flex-1">
+              <p className="text-xs text-cova-textMuted uppercase tracking-wider font-semibold">From</p>
+              <p className="text-sm font-medium text-cova-text mt-0.5">{selectedWallet?.name}</p>
+              <p className="text-xs text-cova-textSecondary mt-0.5">{formatPHP(balance)}</p>
+            </div>
+            <ArrowLeftRight className="w-4 h-4 text-cova-primary flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-xs text-cova-textMuted uppercase tracking-wider font-semibold">To</p>
+              <select value={transferTo} onChange={(e) => setTransferTo(e.target.value)} className="input w-full mt-0.5 py-1.5 text-sm">
+                {wallets.filter((wallet) => wallet.id !== activeWalletId).map((wallet) => (
+                  <option key={wallet.id} value={wallet.id}>{wallet.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="label">Amount (₱)</label>
+            <Input type="number" min="0" step="0.01" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} placeholder="0.00" />
+          </div>
+          <div>
+            <label className="label">Note (optional)</label>
+            <Input value={transferNote} onChange={(e) => setTransferNote(e.target.value)} placeholder="e.g. For groceries" maxLength={120} />
+          </div>
         </div>
       </Modal>
     </div>

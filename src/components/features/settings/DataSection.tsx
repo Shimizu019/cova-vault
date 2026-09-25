@@ -1,6 +1,6 @@
 import { Database, Download, Upload, Trash2 } from 'lucide-react';
 import { Button } from '@components/ui/Button';
-import { useCredentialStore, useSettingsStore, useNoteStore, useUIStore, useActivityStore, useTaskStore, useWalletStore, useSavingsStore } from '@store';
+import { useCredentialStore, useSettingsStore, useNoteStore, useUIStore, useActivityStore, useTaskStore, useWalletStore, normalizeWalletState, useSavingsStore } from '@store';
 import { setVaultKey } from '@lib/crypto/vaultStorage';
 import { resetVaultPersistence } from '@lib/storage/vaultPersistence';
 import { exportEncryptedBackup, importEncryptedBackup } from '@lib/crypto/backup';
@@ -18,6 +18,7 @@ export function DataSection() {
       notes: useNoteStore.getState().notes,
       tasks: useTaskStore.getState().tasks,
       wallet: {
+        wallets: useWalletStore.getState().wallets,
         records: useWalletStore.getState().records,
         startingBalance: useWalletStore.getState().startingBalance,
         budgets: useWalletStore.getState().budgets,
@@ -44,7 +45,7 @@ export function DataSection() {
           folders?: any[];
           notes?: any[];
           tasks?: any[];
-          wallet?: { records?: any[]; startingBalance?: number; budgets?: any[] };
+          wallet?: { wallets?: any[]; records?: any[]; startingBalance?: number; budgets?: any[] };
           savings?: any[];
           activities?: any[];
           settings?: any;
@@ -56,11 +57,7 @@ export function DataSection() {
         if (data.notes) useNoteStore.setState({ notes: data.notes });
         if (data.tasks) useTaskStore.setState({ tasks: data.tasks });
         if (data.wallet) {
-          useWalletStore.setState({ 
-            records: data.wallet.records || [],
-            startingBalance: data.wallet.startingBalance ?? 0,
-            budgets: data.wallet.budgets || [],
-          });
+          useWalletStore.setState(normalizeWalletState(data.wallet));
         }
         if (data.savings) useSavingsStore.setState({ goals: data.savings });
         if (data.activities) useActivityStore.setState({ activities: data.activities });
@@ -97,6 +94,7 @@ export function DataSection() {
       useTaskStore.getState().tasks = [];
       useTaskStore.getState().folders = [];
       useWalletStore.getState().records = [];
+      useWalletStore.getState().wallets = [];
       useWalletStore.getState().budgets = [];
       useWalletStore.getState().startingBalance = 0;
       useSavingsStore.getState().goals = [];

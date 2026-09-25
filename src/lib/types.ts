@@ -94,18 +94,45 @@ export interface Budget {
   updatedAt: string;
 }
 
+export type WalletType = 'cash' | 'digital' | 'bank' | 'other';
+
+/** A wallet (Cash, GCash, Maya, etc.) */
+export interface Wallet {
+  id: string;
+  name: string;
+  type: WalletType;
+  currency: string; // e.g., 'PHP'
+  icon?: string; // lucide-react icon name
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Transfer relationship between wallets */
+export interface Transfer {
+  id: string;
+  amount: number;
+  sourceWalletId: string;
+  destinationWalletId: string;
+  date: string;
+  note?: string;
+  createdAt: string;
+}
+
 /** Wallet transaction (Philippine Peso PHP) */
 export interface WalletRecord {
   id: string;
+  walletId: string;          // which wallet this record belongs to
   date: string;
   time: string;
   description: string;
   category: string;
   amount: number;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   cashGiven?: number;
   change?: number;
   note?: string;
+  // Transfer specific fields (only meaningful when type === 'transfer')
+  destinationWalletId?: string; // where money goes
   createdAt: string;
   updatedAt: string;
 }

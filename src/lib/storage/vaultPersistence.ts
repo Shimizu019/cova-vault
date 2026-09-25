@@ -60,6 +60,7 @@ import {
   useTaskStore,
   useUIStore,
   useWalletStore,
+  normalizeWalletState,
 } from '../store';
 
 /** Minimal view of a zustand store, so the registry stays type-safe without `any`. */
@@ -115,9 +116,9 @@ export const VAULT_STORES: VaultStoreDescriptor[] = [
   {
     key: 'cova-wallet-store',
     label: 'PeraLog / My Wallet',
-    countFields: ['records', 'budgets'],
+    countFields: ['records', 'wallets', 'budgets'],
     read: () => asApi(useWalletStore).getState(),
-    apply: (s) => asApi(useWalletStore).setState(s),
+    apply: (s) => asApi(useWalletStore).setState(normalizeWalletState(s)),
   },
   {
     key: 'cova-savings-store',
@@ -251,7 +252,12 @@ export async function hydrateAllStores(): Promise<HydrateResult[]> {
       // Applying persisted state must not write it back through Zustand.
       // Keep even salvaged blobs intact for recovery; the next user edit will
       // persist the recovered state through the normal save path.
-      descriptor.apply(state);
+      // Apply migrated state before opening the write gate. The migration itself
+      // must not trigger a persistence write while the stored blob is untouched.
+      const hydratedState = key === 'cova-wallet-store'
+        ? normalizeWalletState(state)
+        : state;
+      descriptor.apply(hydratedState);
       markStoreHydrated(key);
 
       const counts = countArrays(descriptor.read(), descriptor.countFields);
