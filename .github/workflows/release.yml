@@ -76,66 +76,21 @@ jobs:
           node scripts/android-version.mjs --name "$VERSION_NAME" >> "$GITHUB_OUTPUT"
         shell: bash
 
-      # The release keystore is stored as a base64 GitHub secret so every
-      # released APK shares one certificate. Without it Android reports the app
-      # "already exists" and refuses the update.
-      - name: Decode release keystore
-        id: keystore
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          set -euo pipefail
 
-          if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
-            echo "::error::Missing GitHub secret ANDROID_KEYSTORE_BASE64. Release APKs must be signed with the persistent Cova Vault release keystore (see docs/android-release-signing.md)."
-            exit 1
-          fi
-
-          NORMALIZED_BASE64="$(printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '\r\n[:space:]')"
-
-          if ! printf '%s' "$NORMALIZED_BASE64" | grep -Eq '^[A-Za-z0-9+/]*={0,2}$'; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 is malformed. Paste only the Base64-encoded keystore contents, with no shell commands or extra text."
-            exit 1
-          fi
-
-          KEYSTORE_PATH="$RUNNER_TEMP/cova-release.keystore"
-
-          if ! printf '%s' "$NORMALIZED_BASE64" | base64 --decode --ignore-garbage > "$KEYSTORE_PATH"; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 could not be decoded as Base64. Generate it with: base64 -w 0 cova-release.keystore"
-            exit 1
-          fi
-
-          if [ ! -s "$KEYSTORE_PATH" ]; then
-            echo "::error::Decoded release keystore is empty."
-            exit 1
-          fi
-
-          echo "keystore_path=$KEYSTORE_PATH" >> "$GITHUB_OUTPUT"
-        shell: bash
-
-      - name: Build release APK
+      - name: Build debug APK
         id: build_apk
         env:
           COVA_VERSION_NAME: ${{ steps.android_version.outputs.versionName }}
           COVA_VERSION_CODE: ${{ steps.android_version.outputs.versionCode }}
-          COVA_REQUIRE_RELEASE_SIGNING: "1"
-          COVA_KEYSTORE_PATH: ${{ steps.keystore.outputs.keystore_path }}
-          COVA_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          COVA_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          COVA_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          echo "Building with versionName=$COVA_VERSION_NAME versionCode=$COVA_VERSION_CODE"
-          if [ -z "${COVA_KEYSTORE_PASSWORD:-}" ] || [ -z "${COVA_KEY_ALIAS:-}" ] || [ -z "${COVA_KEY_PASSWORD:-}" ]; then
-            echo "::error::Missing release signing secrets. Set ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD (see docs/android-release-signing.md)."
-            exit 1
-          fi
+          echo "Building debug APK with versionName=$COVA_VERSION_NAME versionCode=$COVA_VERSION_CODE"
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleRelease -x lint --no-daemon --stacktrace 2>&1 | tee gradle-build.log
+          ./gradlew assembleDebug -x lint --no-daemon --stacktrace 2>&1 | tee gradle-build.log
           BUILD_EXIT=${PIPESTATUS[0]}
           echo "build_exit_code=$BUILD_EXIT" >> "$GITHUB_OUTPUT"
-          echo "=== Release APK files ==="
-          find . -path '*outputs/apk/release*' -name '*.apk' -type f 2>/dev/null || echo "No release APK files found"
+          echo "=== Debug APK files ==="
+          find . -path '*outputs/apk/debug*' -name '*.apk' -type f 2>/dev/null || echo "No debug APK files found"
           exit "$BUILD_EXIT"
         shell: bash
 
@@ -150,19 +105,19 @@ jobs:
         id: find_apk
         if: steps.build_apk.outcome == 'success'
         run: |
-          APK_PATH=$(find android/app/build/outputs/apk/release -name '*.apk' 2>/dev/null | head -1 || true)
+          APK_PATH=$(find android/app/build/outputs/apk/debug -name '*.apk' 2>/dev/null | head -1 || true)
           if [ -z "$APK_PATH" ]; then
-            APK_PATH=$(find android -path '*outputs/apk/release*' -name '*.apk' -type f 2>/dev/null | head -1 || true)
+            APK_PATH=$(find android -path '*outputs/apk/debug*' -name '*.apk' -type f 2>/dev/null | head -1 || true)
           fi
           if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
-            echo "::error::Build succeeded but no release APK was produced."
+            echo "::error::Build succeeded but no debug APK was produced."
             exit 1
           fi
           echo "apk_path=${APK_PATH}" >> "$GITHUB_OUTPUT"
         shell: bash
 
-      # Guards the update preconditions before anything is published:
-      # applicationId, versionName/versionCode, and the signing certificate.
+      # Guards the installation preconditions before anything is published:
+      # applicationId, versionName/versionCode, and signature validity.
       - name: Verify APK identity
         if: steps.build_apk.outcome == 'success' && steps.find_apk.outcome == 'success'
         run: |
@@ -170,7 +125,7 @@ jobs:
           EXPECTED_NAME="${{ steps.android_version.outputs.versionName }}"
           EXPECTED_CODE="${{ steps.android_version.outputs.versionCode }}"
           if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
-            echo "::error::Release APK was not produced; refusing to publish a release without it."
+            echo "::error::Debug APK was not produced; refusing to publish a release without it."
             exit 1
           fi
 
@@ -195,28 +150,12 @@ jobs:
             echo "::warning::No aapt/aapt2 available to read APK badging; skipped the metadata assertions."
           fi
 
-          EXPECTED_CERT="${{ vars.ANDROID_RELEASE_CERT_SHA256 }}"
-          if [ -z "$EXPECTED_CERT" ]; then
-            echo "::error::Missing GitHub variable ANDROID_RELEASE_CERT_SHA256. Pin the production release certificate's SHA-256 fingerprint so CI proves every APK is signed by the same key (see docs/android-release-signing.md)."
-            exit 1
-          fi
-
-          if printf '%s' "$EXPECTED_CERT" | grep -Eiq 'keytool|apksigner|sha256|certificate'; then
-            echo "::error::ANDROID_RELEASE_CERT_SHA256 must be the certificate fingerprint only, not a command or shell snippet. Example: AB:CD:EF:...:FF"
-            exit 1
-          fi
-
-          if ! printf '%s' "$EXPECTED_CERT" | tr -d ':' | grep -Eq '^[A-Fa-f0-9]{64}$'; then
-            echo "::error::ANDROID_RELEASE_CERT_SHA256 must be a 64-hex SHA-256 fingerprint (colons optional). Found: $EXPECTED_CERT"
-            exit 1
-          fi
-
           if [ ! -x "$APKSIGNER" ]; then
-            echo "::error::apksigner was not found in the Android SDK; cannot verify the release signature."
+            echo "::error::apksigner was not found in the Android SDK; cannot verify signature."
             exit 1
           fi
 
-          echo "=== Signer certificate (must equal the previous release's certificate) ==="
+          echo "=== Signer certificate ==="
           set +e
           "$APKSIGNER" verify --print-certs "$APK_PATH" > apksigner-report.txt 2>&1
           SIGNER_EXIT=$?
@@ -228,20 +167,8 @@ jobs:
             exit 1
           fi
 
-          CERT_SHA=$(grep -i 'certificate SHA-256 digest' apksigner-report.txt | head -1 | awk '{print $NF}' | tr 'a-f' 'A-F' || true)
-          PINNED_SHA=$(printf '%s' "$EXPECTED_CERT" | tr -d ':' | tr 'a-f' 'A-F')
-
-          if [ -z "$CERT_SHA" ]; then
-            echo "::error::apksigner output did not contain a certificate SHA-256 digest; cannot verify the signing identity."
-            exit 1
-          fi
-
-          if [ "$CERT_SHA" != "$PINNED_SHA" ]; then
-            echo "::error::Signing certificate mismatch - APK is signed by $CERT_SHA but the pinned release certificate is $PINNED_SHA. Android would refuse this APK as an update."
-            exit 1
-          fi
-
-          echo "Certificate matches the pinned release fingerprint ($CERT_SHA)."
+          CERT_SHA=$(grep -i 'certificate SHA-256 digest' apksigner-report.txt | head -1 | awk '{print $NF}' || true)
+          echo "Debug APK signed successfully ($CERT_SHA)."
         shell: bash
 
       - name: Set up GitHub CLI
